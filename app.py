@@ -13,17 +13,17 @@ if PROJECT_ID:
     vertexai.init(project=PROJECT_ID, location=REGION)
 
 # --- Tool Definition für Data Store ---
-DATA_STORE_LOCATION = "eu"  # Location des Data Store
-DATA_STORE_ID_SHORT = "ai-study-companion-data-store_1765190826355"  # Nur die ID
+# DATA_STORE_LOCATION = "eu"  # Location des Data Store
+# DATA_STORE_ID_SHORT = "ai-study-companion-data-store_1765190826355"  # Nur die ID
 tools = []
 if PROJECT_ID:
     # Definiere das Retrieval-Tool für Vertex AI Search
     datastore_tool = Tool.from_retrieval(
         retrieval=grounding.Retrieval(
             source=grounding.VertexAISearch(
-                data_store_id=DATA_STORE_ID_SHORT,
-                project=PROJECT_ID,
-                location=DATA_STORE_LOCATION
+                datastore=DATA_STORE_ID,
+                # project=PROJECT_ID,
+                #location=DATA_STORE_LOCATION
             )
         )
     )
@@ -31,17 +31,21 @@ if PROJECT_ID:
 
 # --- Spezifischer Prompt (System Instruction) ---
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter. Ihre Aufgabe ist es, die bereitgestellte Dokumentation (das PDF-Skript) zu analysieren und eine strukturierte Markdown-Antwort zu generieren.
+Sie sind ein hochspezialisierter KI-Studienbegleiter. Ihre Aufgabe ist es, die **vom Data Store Tool bereitgestellten Informationen** zu analysieren und eine strukturierte Markdown-Antwort zu generieren.
 
-Nutzen Sie das bereitgestellte "Data Store" Tool, um Informationen aus dem Skript abzurufen.
+**WICHTIG:** Das Data Store Tool hat die notwendigen Dokument-Auszüge bereits abgerufen. Sie müssen sich **NICHT** für einen fehlenden Zugriff auf GCS oder lokale Dateien entschuldigen, sondern müssen die abgerufenen Inhalte direkt für die Generierung nutzen.
 
 Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
 
-1.  **Umfassende Zusammenfassung (Summary):** Eine prägnante, aber vollständige Zusammenfassung der wichtigsten Konzepte und Argumente.
-2.  **Thematische Übersicht (Topics):** Eine hierarchische (nummerierte oder verschachtelte) Gliederung der im Skript behandelten Hauptthemen und Unterpunkte.
-3.  **Lernziele (Learning Goals):** Eine Liste von mindestens fünf spezifischen, messbaren Lernzielen (SMART-Prinzip) in Form von Aktionsverben ("Der Studierende kann...", "Definieren Sie...", "Analysieren Sie...").
+1.  **Zusammenfassung:** Eine prägnante, aber vollständige Zusammenfassung der wichtigsten Konzepte und Argumente.
+2.  **Thematische Übersicht:** Eine hierarchische (nummerierte oder verschachtelte) Gliederung der im Skript behandelten Hauptthemen und Unterpunkte.
+3.  **Lernziele:** Eine Liste von mindestens fünf spezifischen, messbaren Lernzielen (SMART-Prinzip) in Form von Aktionsverben ("Der Studierende kann...", "Definieren Sie...", "Analysieren Sie...").
 
 Die Antwort MUSS ausschließlich im Markdown-Format erfolgen.
+
+Bitte lasse Voworte raus wie: Gerne fasse ich die wichtigsten Inhalte des vorliegenden Skripts zusammen. Die bereitgestellten Informationen behandeln grundlegende Aspekte der Bildaufnahme und Videosignalübertragung.
+
+Gebe nur oben genannten 3 Punkte an.
 """
 
 app = Flask(__name__)
@@ -63,13 +67,13 @@ def analyze_script():
              return jsonify({"error": "Server misconfiguration: Missing GCP_PROJECT_ID or DATA_STORE_ID"}), 500
 
         data = request.get_json()
-        file_name = data.get("file_name") # z.B. 'gcs://your-bucket-name/skript.pdf'
+        file_name = data.get("file_name") # 'gcs://ai-study-companion/BWS.pdf'
 
         if not file_name:
             return jsonify({"error": "Fehlendes 'file_name' im JSON-Body."}), 400
         
         # Der Prompt muss das Modell anweisen, das Tool zu benutzen
-        user_prompt = f"Analysiere das Dokument '{file_name}'. Nutze UNBEDINGT das verfügbare Data Store Tool um den Inhalt zu finden. Erstelle dann: 1) Zusammenfassung, 2) Thematische Übersicht, 3) Lernziele."
+        user_prompt = "Fasse die wichtigsten Inhalte des vorliegenden Skripts zusammen. Nutze UNBEDINGT das verfügbare Data Store Tool, um alle relevanten Fakten abzurufen. Erstelle dann die drei geforderten Abschnitte (Zusammenfassung, Themenübersicht, Lernziele)."
 
         # Initialisiere das Modell mit den Tools
         model = GenerativeModel(
