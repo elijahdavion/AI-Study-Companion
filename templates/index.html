@@ -33,6 +33,9 @@
             max-width: 900px;
             width: 100%;
             animation: fadeIn 0.6s ease-out;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
         }
 
         @keyframes fadeIn {
@@ -47,18 +50,44 @@
             }
         }
 
-        h1 {
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
             color: #667eea;
             font-size: 2.5em;
-            margin-bottom: 10px;
-            text-align: center;
+            margin: 0;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .header h1:hover {
+            transform: scale(1.05);
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .home-screen {
+            gap: 25px;
         }
 
         .subtitle {
-            text-align: center;
             color: #666;
-            margin-bottom: 30px;
             font-size: 1.1em;
+            text-align: center;
         }
 
         .input-group {
@@ -72,23 +101,34 @@
             font-weight: 600;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 15px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 1em;
             transition: all 0.3s ease;
+            font-family: inherit;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        select:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polypolyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+
         button {
-            width: 100%;
             padding: 15px 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -98,6 +138,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
         }
 
         button:hover {
@@ -115,96 +156,8 @@
             transform: none;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .results {
-            display: none;
-            margin-top: 30px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            border-left: 5px solid #667eea;
-        }
-
-        .results h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.5em;
-        }
-
-        .results h3 {
-            color: #764ba2;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        .results ul,
-        .results ol {
-            margin-left: 20px;
-            line-height: 1.8;
-        }
-
-        .results p {
-            line-height: 1.8;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .error {
-            display: none;
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            border-left: 5px solid #c33;
-        }
-
-        .sources {
-            margin-top: 20px;
-            padding: 15px;
-            background: #e8f4f8;
-            border-radius: 10px;
-            font-size: 0.9em;
-        }
-
-        .sources h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .sources a {
-            color: #667eea;
-            word-break: break-all;
-        }
-
         .upload-section {
-            margin-bottom: 35px;
-            padding: 20px;
+            padding: 25px;
             background: #f0f4ff;
             border-radius: 15px;
             border: 2px dashed #667eea;
@@ -251,11 +204,6 @@
             font-size: 0.95em;
         }
 
-        .upload-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-bottom: 10px;
-        }
-
         .upload-progress {
             display: none;
             margin-top: 15px;
@@ -296,15 +244,161 @@
             font-weight: 600;
         }
 
-        .indexing-info {
-            margin-top: 15px;
-            padding: 12px;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 8px;
-            color: #856404;
-            font-size: 0.95em;
+        .loading {
             display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results {
+            display: none;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .results h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .results h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .results ul,
+        .results ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .results p {
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #c33;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .analysis-screen {
+            gap: 20px;
+        }
+
+        .analysis-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .back-button {
+            padding: 10px 20px;
+            background: #f0f4ff;
+            color: #667eea;
+            border: 2px solid #667eea;
+            font-size: 1em;
+            width: auto;
+            align-self: flex-start;
+        }
+
+        .back-button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .files-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .file-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background: #f8f9fa;
+        }
+
+        .file-item.selected {
+            background: #e8f4f8;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.95em;
+        }
+
+        .file-date {
+            font-size: 0.85em;
+            color: #999;
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .no-files {
+            padding: 20px;
+            text-align: center;
+            color: #999;
         }
 
         @media (max-width: 600px) {
@@ -312,7 +406,7 @@
                 padding: 25px;
             }
 
-            h1 {
+            .header h1 {
                 font-size: 2em;
             }
         }
@@ -321,56 +415,80 @@
 
 <body>
     <div class="container">
-        <h1>🎓 AI Study Companion</h1>
-        <p class="subtitle">Analysiere deine Studienskripte intelligent mit KI</p>
+        <!-- Header with Title as Navigation -->
+        <div class="header">
+            <h1 id="appTitle" onclick="goHome()" title="Zur Startseite">🎓 AI Study Companion</h1>
+        </div>
 
-        <!-- Upload Section -->
-        <div class="upload-section">
-            <h3>📤 PDF hochladen</h3>
-            <div class="file-input-wrapper">
-                <label for="pdfFile" class="file-input-label">
-                    <span id="fileLabel">📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)</span>
-                </label>
-                <input type="file" id="pdfFile" accept=".pdf" />
-                <div class="file-name-display" id="fileNameDisplay"></div>
-            </div>
-            <button id="uploadBtn" class="upload-button" onclick="uploadPdf()">
-                🚀 PDF hochladen
-            </button>
-            <div class="upload-progress" id="uploadProgress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
+        <!-- Home Screen -->
+        <div class="screen active home-screen" id="homeScreen">
+            <p class="subtitle">Analysiere deine Studienskripte intelligent mit KI</p>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h3>📤 PDF hochladen</h3>
+                <div class="file-input-wrapper">
+                    <label for="pdfFile" class="file-input-label">
+                        <span id="fileLabel">📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)</span>
+                    </label>
+                    <input type="file" id="pdfFile" accept=".pdf" />
+                    <div class="file-name-display" id="fileNameDisplay"></div>
                 </div>
-                <div class="upload-status" id="uploadStatus"></div>
+                <button id="uploadBtn" class="upload-button" onclick="uploadPdf()">
+                    🚀 PDF hochladen
+                </button>
+                <div class="upload-progress" id="uploadProgress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="upload-status" id="uploadStatus"></div>
+                </div>
             </div>
-            <div class="indexing-info" id="indexingInfo">
-                ⏱️ Neue Dateien können 5-30 Minuten benötigen, um in der Suchliste zu erscheinen.
+
+            <!-- Files Dropdown Section -->
+            <div class="input-group">
+                <label for="fileDropdown">📁 Dateien aus deinem Google Cloud Storage Bucket:</label>
+                <select id="fileDropdown" onchange="selectFileFromDropdown()">
+                    <option value="">-- Datei auswählen --</option>
+                </select>
+                <div id="filesList" class="files-list" style="margin-top: 10px; display: none;"></div>
+            </div>
+
+            <button id="analyzeBtn" onclick="analyzeDocument()">
+                📊 Skript analysieren
+            </button>
+
+            <div class="error" id="homeError"></div>
+        </div>
+
+        <!-- Analysis Screen -->
+        <div class="screen analysis-screen" id="analysisScreen">
+            <button class="back-button" onclick="goHome()">← Zurück zur Startseite</button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                    Analysiere Dokument... Dies kann bis zu 30 Sekunden dauern.
+                </p>
+            </div>
+
+            <div class="error active" id="analysisError"></div>
+
+            <div class="analysis-content-wrapper">
+                <div class="results active" id="results"></div>
             </div>
         </div>
-
-        <div class="input-group">
-            <label for="fileName">PDF-Dateien aus deinem Google Cloud Storage Bucket:</label>
-            <input type="text" id="fileName" placeholder="gs://ai-study-companion-bucket/BWS.pdf"
-                value="gs://ai-study-companion-bucket/BWS.pdf">
-        </div>
-
-        <button id="analyzeBtn" onclick="analyzeDocument()">
-            📊 Skript analysieren
-        </button>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
-                Analysiere Dokument... Dies kann bis zu 30 Sekunden dauern.
-            </p>
-        </div>
-
-        <div class="error" id="error"></div>
-
-        <div class="results" id="results"></div>
     </div>
 
     <script>
+        // Global variable to track selected file
+        let selectedFile = null;
+
+        // Initialize files list on page load
+        window.addEventListener('load', () => {
+            loadFilesList();
+        });
+
         // File upload handling
         const pdfFileInput = document.getElementById('pdfFile');
         const fileLabel = document.getElementById('fileLabel');
@@ -421,30 +539,89 @@
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
 
+        async function loadFilesList() {
+            try {
+                const response = await fetch('/list-files');
+                const data = await response.json();
+
+                if (response.ok && data.files) {
+                    const dropdown = document.getElementById('fileDropdown');
+                    const filesList = document.getElementById('filesList');
+                    
+                    // Clear existing options (except the first one)
+                    dropdown.innerHTML = '<option value="">-- Datei auswählen --</option>';
+                    
+                    let filesHtml = '';
+                    if (data.files.length === 0) {
+                        filesHtml = '<div class="no-files">Keine Dateien im Bucket</div>';
+                    } else {
+                        data.files.forEach(file => {
+                            const date = new Date(file.created).toLocaleDateString('de-DE');
+                            const fileName = file.name.split('/').pop();
+                            
+                            dropdown.innerHTML += `<option value="${file.gs_path}">${fileName}</option>`;
+                            
+                            filesHtml += `<div class="file-item" onclick="selectFile('${file.gs_path}', '${fileName}')">
+                                <span class="file-name">${fileName}</span>
+                                <span class="file-date">${date}</span>
+                            </div>`;
+                        });
+                    }
+                    
+                    filesList.innerHTML = filesHtml;
+                    filesList.style.display = data.files.length > 0 ? 'block' : 'none';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Dateien:', error);
+            }
+        }
+
+        function selectFile(gsPath, fileName) {
+            selectedFile = gsPath;
+            const fileItems = document.querySelectorAll('.file-item');
+            fileItems.forEach(item => item.classList.remove('selected'));
+            event.target.closest('.file-item').classList.add('selected');
+        }
+
+        function selectFileFromDropdown() {
+            const dropdown = document.getElementById('fileDropdown');
+            selectedFile = dropdown.value;
+            
+            // Update visual selection in file list
+            if (selectedFile) {
+                const fileItems = document.querySelectorAll('.file-item');
+                fileItems.forEach(item => {
+                    const itemPath = item.getAttribute('onclick').match(/'([^']+)'/)[1];
+                    if (itemPath === selectedFile) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+        }
+
         async function uploadPdf() {
             const file = pdfFileInput.files[0];
             const uploadProgress = document.getElementById('uploadProgress');
             const progressFill = document.getElementById('progressFill');
             const uploadStatus = document.getElementById('uploadStatus');
-            const indexingInfo = document.getElementById('indexingInfo');
-            const errorDiv = document.getElementById('error');
-            const fileName = document.getElementById('fileName');
+            const errorDiv = document.getElementById('homeError');
 
             // Reset
             uploadProgress.style.display = 'none';
-            indexingInfo.style.display = 'none';
             errorDiv.style.display = 'none';
 
             if (!file) {
                 errorDiv.textContent = '❌ Bitte wählen Sie eine PDF-Datei aus.';
-                errorDiv.style.display = 'block';
+                errorDiv.classList.add('active');
                 return;
             }
 
             // Validate file type
             if (!file.name.toLowerCase().endsWith('.pdf')) {
                 errorDiv.textContent = '❌ Bitte laden Sie nur PDF-Dateien hoch.';
-                errorDiv.style.display = 'block';
+                errorDiv.classList.add('active');
                 return;
             }
 
@@ -452,7 +629,7 @@
             const maxSize = 100 * 1024 * 1024;
             if (file.size > maxSize) {
                 errorDiv.textContent = `❌ Datei zu groß! Maximum: 100 MB (Ihre Datei: ${formatFileSize(file.size)})`;
-                errorDiv.style.display = 'block';
+                errorDiv.classList.add('active');
                 return;
             }
 
@@ -485,18 +662,17 @@
                         uploadStatus.textContent = `✓ ${response.filename}`;
                         uploadStatus.className = 'upload-status success';
                         
-                        // Auto-populate filename in analysis field
-                        fileName.value = response.gcs_path;
+                        // Select the uploaded file
+                        selectedFile = response.gcs_path;
                         
-                        // Show indexing info
-                        indexingInfo.style.display = 'block';
-                        
-                        // Reset file input after 2 seconds
+                        // Reload files list
                         setTimeout(() => {
+                            loadFilesList();
                             pdfFileInput.value = '';
                             fileNameDisplay.textContent = '';
                             fileLabel.textContent = '📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)';
-                        }, 2000);
+                            uploadProgress.style.display = 'none';
+                        }, 1500);
                     } else {
                         const response = JSON.parse(xhr.responseText);
                         throw new Error(response.error || 'Upload fehlgeschlagen');
@@ -514,33 +690,35 @@
                 uploadStatus.textContent = `✗ Fehler: ${error.message}`;
                 uploadStatus.className = 'upload-status error';
                 errorDiv.textContent = `❌ ${error.message}`;
-                errorDiv.style.display = 'block';
+                errorDiv.classList.add('active');
             } finally {
                 uploadBtn.disabled = false;
             }
         }
 
         async function analyzeDocument() {
-            const fileName = document.getElementById('fileName').value;
+            if (!selectedFile) {
+                const errorDiv = document.getElementById('homeError');
+                errorDiv.textContent = '❌ Bitte wählen Sie eine Datei aus.';
+                errorDiv.classList.add('active');
+                return;
+            }
+
+            // Switch to analysis screen
+            switchScreen('analysisScreen');
+            
             const loadingDiv = document.getElementById('loading');
             const resultsDiv = document.getElementById('results');
-            const errorDiv = document.getElementById('error');
-            const analyzeBtn = document.getElementById('analyzeBtn');
+            const errorDiv = document.getElementById('analysisError');
 
             // Reset
             loadingDiv.style.display = 'none';
             resultsDiv.style.display = 'none';
             errorDiv.style.display = 'none';
-
-            if (!fileName) {
-                errorDiv.textContent = 'Bitte geben Sie einen Dateinamen ein.';
-                errorDiv.style.display = 'block';
-                return;
-            }
+            errorDiv.classList.remove('active');
 
             // Show loading
             loadingDiv.style.display = 'block';
-            analyzeBtn.disabled = true;
 
             try {
                 const response = await fetch('/analyze', {
@@ -548,7 +726,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ file_name: fileName })
+                    body: JSON.stringify({ file_name: selectedFile })
                 });
 
                 const data = await response.json();
@@ -558,20 +736,29 @@
                 }
 
                 // Display results
-                let html = '<div class="analysis-content">';
-                html += convertMarkdownToHtml(data.analysis_result);
-                html += '</div>';
-
+                let html = convertMarkdownToHtml(data.analysis_result);
                 resultsDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
 
             } catch (error) {
                 errorDiv.textContent = `❌ Fehler: ${error.message}`;
-                errorDiv.style.display = 'block';
+                errorDiv.classList.add('active');
+                resultsDiv.style.display = 'none';
             } finally {
                 loadingDiv.style.display = 'none';
-                analyzeBtn.disabled = false;
             }
+        }
+
+        function switchScreen(screenId) {
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goHome() {
+            switchScreen('homeScreen');
+            const errorDiv = document.getElementById('homeError');
+            errorDiv.classList.remove('active');
         }
 
         // Markdown to HTML converter using marked.js
@@ -592,13 +779,6 @@
             });
             return marked.parse(cleaned);
         }
-
-        // Allow Enter key to submit
-        document.getElementById('fileName').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                analyzeDocument();
-            }
-        });
     </script>
 </body>
 

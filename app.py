@@ -85,6 +85,39 @@ def health_check():
     """
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/list-files", methods=["GET"])
+def list_files():
+    """
+    Listet alle PDF-Dateien im GCS Bucket auf.
+    """
+    try:
+        if not PROJECT_ID:
+            return jsonify({"error": "Server misconfiguration: Missing GCP_PROJECT_ID"}), 500
+
+        storage_client = storage.Client(project=PROJECT_ID)
+        bucket = storage_client.bucket(GCS_BUCKET_NAME)
+        
+        blobs = bucket.list_blobs()
+        files = []
+        
+        for blob in blobs:
+            if blob.name.lower().endswith('.pdf'):
+                files.append({
+                    "name": blob.name,
+                    "gs_path": f"gs://{GCS_BUCKET_NAME}/{blob.name}",
+                    "size": blob.size,
+                    "created": blob.time_created.isoformat() if blob.time_created else None
+                })
+        
+        # Sortiere nach neuesten zuerst
+        files.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({"files": files}), 200
+
+    except Exception as e:
+        app.logger.error(f"Fehler beim Auflisten der Dateien: {e}")
+        return jsonify({"error": "Fehler beim Auflisten der Dateien", "details": str(e)}), 500
+
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
     """
