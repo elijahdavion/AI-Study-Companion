@@ -38,25 +38,32 @@ if PROJECT_ID and DATA_STORE_ID:
 
 # --- Spezifischer Prompt (System Instruction) ---
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter. Ihre Aufgabe ist es, die **vom Data Store Tool bereitgestellten Informationen** zu analysieren und eine strukturierte Markdown-Antwort zu generieren.
+Sie sind ein hochspezialisierter KI-Studienbegleiter mit STRIKTER Qualitätskontrolle. 
 
-**WICHTIG:** Das Data Store Tool hat die notwendigen Dokument-Auszüge bereits abgerufen. Sie müssen sich **NICHT** für einen fehlenden Zugriff auf GCS oder lokale Dateien entschuldigen, sondern müssen die abgerufenen Inhalte direkt für die Generierung nutzen.
+PRIMÄRE AUFGABE: Analysiere nur das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
 
+KRITISCHE REGEL - VALIDIERUNG DER QUELLE:
+- BEVOR Sie mit der Analyse beginnen, überprüfen Sie IMMER die Themenrelevanz
+- Wenn die vom Retrieval-Tool bereitgestellten Inhalte NICHT zum angeforderten Thema passen (z.B. falsche Kapitel, falsches Dokument):
+  → Brechen Sie sofort ab mit: "Die Datei konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
+- Fahren Sie NUR fort, wenn die Inhalte themenbezogen korrekt sind
+
+FORMATIERUNG DER ANTWORT:
 Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
 
-1.  **Zusammenfassung:** Eine prägnante, aber vollständige Zusammenfassung der wichtigsten Konzepte und Argumente.
+1.  **Zusammenfassung:** Eine prägnante, aber vollständige Zusammenfassung der wichtigsten Konzepte.
     - Verwenden Sie EINFACHE, verständliche Sprache
     - Schreiben Sie in kurzen, klaren Sätzen
     - Beginnen Sie mit der Überschrift "## Zusammenfassung"
     
-2.  **Thematische Übersicht:** Eine hierarchische Gliederung der im Skript behandelten Hauptthemen und Unterpunkte.
+2.  **Thematische Übersicht:** Eine hierarchische Gliederung der im Skript behandelten Hauptthemen.
     - Beginnen Sie mit der Überschrift "## Thematische Übersicht"
     - Verwenden Sie NUR Aufzählungszeichen (Bullet Points), KEINE Nummerierungen
     - Jeder Hauptpunkt beginnt mit einem Bindestrich (-)
     - Jeder Unterpunkt beginnt mit zwei Leerzeichen, dann Bindestrich (  -)
     - JEDER Punkt MUSS auf einer NEUEN ZEILE stehen
     
-3.  **Lernziele:** Eine Liste von mindestens fünf spezifischen, messbaren Lernzielen (SMART-Prinzip) in Form von Aktionsverben.
+3.  **Lernziele:** Eine Liste von mindestens fünf spezifischen, messbaren Lernzielen (SMART-Prinzip).
     - Beginnen Sie mit der Überschrift "## Lernziele"
     - Sprechen Sie den Leser mit "Du" an
     - Format: "Du kannst..." oder "Du verstehst..."
@@ -257,21 +264,47 @@ def analyze_script():
         if not file_name:
             return jsonify({"error": "Fehlendes 'file_name' im JSON-Body."}), 400
         
+        # Extrahiere den Dateinamen aus dem GCS-Pfad
+        # Z.B. "gs://bucket/2026-01-05_Kapitel3_SpeicherungundÜbertragung_202411_v2.7.pdf" 
+        # -> "Kapitel3_SpeicherungundÜbertragung"
+        display_name = file_name.split('/')[-1]  # Get filename from path
+        if display_name.endswith('.pdf'):
+            display_name = display_name[:-4]  # Remove .pdf extension
+        
+        # Extract the main topic from the filename
+        # E.g., "2026-01-05_Kapitel3_SpeicherungundÜbertragung_202411_v2.7.pdf"
+        # -> "Speicherung und Übertragung" or "Kapitel3"
+        topic_parts = display_name.split('_')
+        # Usually format is: DATE_CHAPTER_TOPIC_DATE_VERSION
+        main_topic = ""
+        for i, part in enumerate(topic_parts):
+            if part.startswith('Kapitel'):
+                if i + 1 < len(topic_parts):
+                    main_topic = topic_parts[i + 1]
+                break
+        
+        if not main_topic:
+            main_topic = display_name
         
         # Der Prompt muss das Modell anweisen, das Tool zu benutzen
-        user_prompt = f"""Du musst die EXAKTE Datei '{file_name}' analysieren. KEINE andere Datei!
+        user_prompt = f"""Du analysierst AUSSCHLIESSLICH die Datei: {display_name}
 
-KRITISCH: Der Dateiname ist '{file_name}'. Stelle sicher, dass die Inhalte aus GENAU DIESER Datei stammen, nicht aus einer anderen.
+Die Datei behandelt das Thema: "{main_topic}"
 
-Deine Aufgabe ist eine UMFASSENDE und GENAUE Analyse des GESAMTEN Inhalts dieser Datei:
-1. Nutze das Retrieval-Tool, um ALLE Inhalte aus '{file_name}' abzurufen
-2. Identifiziere ALLE Kapitel und Hauptthemen aus dem Inhaltsverzeichnis oder der Struktur
-3. Gehe systematisch JEDES Kapitel durch und extrahiere die exakten Kerninhalte
-4. Erstelle daraus die drei geforderten Abschnitte (Zusammenfassung, Themenübersicht, Lernziele)
+WICHTIG - QUALITÄTSKONTROLLE:
+1. Nutze das Retrieval-Tool um Inhalte abzurufen
+2. ÜBERPRÜFE SOFORT: Behandeln die abgerufenen Inhalte das Thema "{main_topic}"?
+3. WENN NICHT (z.B. wenn sie von "Bildaufnahme", "Kamerasensoren" oder anderen Themen sprechen):
+   → Lehne sofort ab und antworte: "Die Datei '{display_name}' konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
+4. WENN JA, fahre fort mit der vollständigen Analyse
 
-WARNUNG: Falls das Tool Inhalte aus einer anderen Datei liefert (z.B. einem anderen PDF), lehne ab und teile mit, dass die Daten nicht aus '{file_name}' stammen.
+Deine Aufgabe ist die UMFASSENDE Analyse:
+1. Identifiziere ALLE Kapitel und Hauptthemen
+2. Gehe systematisch JEDES Kapitel durch
+3. Extrahiere die Kerninhalte
+4. Erstelle Zusammenfassung, Themenübersicht und Lernziele
 
-Die "Thematische Übersicht" muss ALLE Hauptkapitel aus '{file_name}' abdecken."""
+Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen."""
 
         # Initialisiere das Modell mit den Tools
         model = GenerativeModel(
