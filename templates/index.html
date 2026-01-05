@@ -1,0 +1,934 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Companion</title>
+    <!-- Marked.js for Markdown to HTML conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .results h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .results h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .results ul,
+        .results ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .results p {
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #c33;
+        }
+
+        .sources {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .sources h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .sources a {
+            color: #667eea;
+            word-break: break-all;
+        }
+
+        .upload-section {
+            margin-bottom: 35px;
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 15px;
+            border: 2px dashed #667eea;
+        }
+
+        .upload-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            border-color: #667eea;
+            background: #f8faff;
+            color: #667eea;
+        }
+
+        .file-name-display {
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 10px;
+            font-size: 0.95em;
+        }
+
+        .upload-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-bottom: 10px;
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .upload-status {
+            font-size: 0.9em;
+            color: #333;
+            text-align: center;
+        }
+
+        .upload-status.success {
+            color: #0a7c2e;
+            font-weight: 600;
+        }
+
+        .upload-status.error {
+            color: #c33;
+            font-weight: 600;
+        }
+
+        .indexing-info {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            color: #856404;
+            font-size: 0.95em;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎓 AI Study Companion</h1>
+        <p class="subtitle">Analysiere deine Studienskripte intelligent mit KI</p>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h3>📤 PDF hochladen</h3>
+            <div class="file-input-wrapper">
+                <label for="pdfFile" class="file-input-label">
+                    <span id="fileLabel">📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)</span>
+                </label>
+                <input type="file" id="pdfFile" accept=".pdf" />
+                <div class="file-name-display" id="fileNameDisplay"></div>
+            </div>
+            <button id="uploadBtn" class="upload-button" onclick="uploadPdf()">
+                🚀 PDF hochladen
+            </button>
+            <div class="upload-progress" id="uploadProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="upload-status" id="uploadStatus"></div>
+            </div>
+            <div class="indexing-info" id="indexingInfo">
+                ⏱️ Neue Dateien können 5-30 Minuten benötigen, um in der Suchliste zu erscheinen.
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="fileName">PDF-Dateien aus deinem Google Cloud Storage Bucket:</label>
+            <input type="text" id="fileName" placeholder="gs://ai-study-companion-bucket/BWS.pdf"
+                value="gs://ai-study-companion-bucket/BWS.pdf">
+        </div>
+
+        <button id="analyzeBtn" onclick="analyzeDocument()">
+            📊 Skript analysieren
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                Analysiere Dokument... Dies kann bis zu 30 Sekunden dauern.
+            </p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        // File upload handling
+        const pdfFileInput = document.getElementById('pdfFile');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        // Handle file selection
+        pdfFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                fileNameDisplay.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+                fileLabel.textContent = '✓ Datei ausgewählt';
+            }
+        });
+
+        // Handle drag and drop
+        const uploadSection = document.querySelector('.upload-section');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.style.background = '#e8f4ff';
+            uploadSection.style.borderColor = '#764ba2';
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.style.background = '#f0f4ff';
+            uploadSection.style.borderColor = '#667eea';
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.style.background = '#f0f4ff';
+            uploadSection.style.borderColor = '#667eea';
+            
+            const files = e.dataTransfer.files;
+            if (files && files[0]) {
+                pdfFileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                pdfFileInput.dispatchEvent(event);
+            }
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        async function uploadPdf() {
+            const file = pdfFileInput.files[0];
+            const uploadProgress = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const indexingInfo = document.getElementById('indexingInfo');
+            const errorDiv = document.getElementById('error');
+            const fileName = document.getElementById('fileName');
+
+            // Reset
+            uploadProgress.style.display = 'none';
+            indexingInfo.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            if (!file) {
+                errorDiv.textContent = '❌ Bitte wählen Sie eine PDF-Datei aus.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Validate file type
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                errorDiv.textContent = '❌ Bitte laden Sie nur PDF-Dateien hoch.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Validate file size (100 MB)
+            const maxSize = 100 * 1024 * 1024;
+            if (file.size > maxSize) {
+                errorDiv.textContent = `❌ Datei zu groß! Maximum: 100 MB (Ihre Datei: ${formatFileSize(file.size)})`;
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Show progress
+            uploadProgress.style.display = 'block';
+            uploadStatus.textContent = 'Hochladen läuft...';
+            uploadStatus.className = 'upload-status';
+            uploadBtn.disabled = true;
+            progressFill.style.width = '0%';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const xhr = new XMLHttpRequest();
+
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressFill.style.width = percentComplete + '%';
+                    }
+                });
+
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        
+                        progressFill.style.width = '100%';
+                        uploadStatus.textContent = `✓ ${response.filename}`;
+                        uploadStatus.className = 'upload-status success';
+                        
+                        // Auto-populate filename in analysis field
+                        fileName.value = response.gcs_path;
+                        
+                        // Show indexing info
+                        indexingInfo.style.display = 'block';
+                        
+                        // Reset file input after 2 seconds
+                        setTimeout(() => {
+                            pdfFileInput.value = '';
+                            fileNameDisplay.textContent = '';
+                            fileLabel.textContent = '📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)';
+                        }, 2000);
+                    } else {
+                        const response = JSON.parse(xhr.responseText);
+                        throw new Error(response.error || 'Upload fehlgeschlagen');
+                    }
+                });
+
+                xhr.addEventListener('error', function() {
+                    throw new Error('Netzwerkfehler beim Upload');
+                });
+
+                xhr.open('POST', '/upload', true);
+                xhr.send(formData);
+
+            } catch (error) {
+                uploadStatus.textContent = `✗ Fehler: ${error.message}`;
+                uploadStatus.className = 'upload-status error';
+                errorDiv.textContent = `❌ ${error.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        async function analyzeDocument() {
+            const fileName = document.getElementById('fileName').value;
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+
+            // Reset
+            loadingDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            if (!fileName) {
+                errorDiv.textContent = 'Bitte geben Sie einen Dateinamen ein.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            loadingDiv.style.display = 'block';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ file_name: fileName })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analyse fehlgeschlagen');
+                }
+
+                // Display results
+                let html = '<div class="analysis-content">';
+                html += convertMarkdownToHtml(data.analysis_result);
+                html += '</div>';
+
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+
+            } catch (error) {
+                errorDiv.textContent = `❌ Fehler: ${error.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Markdown to HTML converter using marked.js
+        function convertMarkdownToHtml(markdown) {
+            // Remove markdown code block wrappers if present
+            let cleaned = markdown.trim();
+
+            // Remove ```markdown at the start and ``` at the end
+            if (cleaned.startsWith('```markdown') || cleaned.startsWith('```')) {
+                cleaned = cleaned.replace(/^```(?:markdown)?\s*\n/i, '');
+                cleaned = cleaned.replace(/\n```\s*$/i, '');
+            }
+
+            // Configure marked for better rendering
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+            return marked.parse(cleaned);
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('fileName').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                analyzeDocument();
+            }
+        });
+    </script>
+</body>
+
+=======
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Companion</title>
+    <!-- Marked.js for Markdown to HTML conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .results h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .results h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .results ul,
+        .results ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .results p {
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #c33;
+        }
+
+        .sources {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .sources h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .sources a {
+            color: #667eea;
+            word-break: break-all;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎓 AI Study Companion</h1>
+        <p class="subtitle">Analysiere deine Studienskripte intelligent mit KI</p>
+
+        <div class="input-group">
+            <label for="fileName">PDF-Dateien aus deinem Google Cloud Storage Bucket:</label>
+            <input type="text" id="fileName" placeholder="gs://ai-study-companion-bucket/BWS.pdf"
+                value="gs://ai-study-companion-bucket/BWS.pdf">
+        </div>
+
+        <button id="analyzeBtn" onclick="analyzeDocument()">
+            📊 Skript analysieren
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                Analysiere Dokument... Dies kann bis zu 30 Sekunden dauern.
+            </p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        async function analyzeDocument() {
+            const fileName = document.getElementById('fileName').value;
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+
+            // Reset
+            loadingDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            if (!fileName) {
+                errorDiv.textContent = 'Bitte geben Sie einen Dateinamen ein.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            loadingDiv.style.display = 'block';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ file_name: fileName })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analyse fehlgeschlagen');
+                }
+
+                // Display results
+                let html = '<div class="analysis-content">';
+                html += convertMarkdownToHtml(data.analysis_result);
+                html += '</div>';
+
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+
+            } catch (error) {
+                errorDiv.textContent = `❌ Fehler: ${error.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Markdown to HTML converter using marked.js
+        function convertMarkdownToHtml(markdown) {
+            // Remove markdown code block wrappers if present
+            let cleaned = markdown.trim();
+
+            // Remove ```markdown at the start and ``` at the end
+            if (cleaned.startsWith('```markdown') || cleaned.startsWith('```')) {
+                cleaned = cleaned.replace(/^```(?:markdown)?\s*\n/i, '');
+                cleaned = cleaned.replace(/\n```\s*$/i, '');
+            }
+
+            // Configure marked for better rendering
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+            return marked.parse(cleaned);
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('fileName').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                analyzeDocument();
+            }
+        });
+    </script>
+</body>
+
+>>>>>>> 22e9e621a1208a0218806fff7ecd67ae10e62067
+</html>

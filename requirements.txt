@@ -1,0 +1,8 @@
+Flask
+<<<<<<< HEAD
+google-cloud-aiplatform
+google-cloud-storage
+=======
+google-cloud-aiplatform>=1.60.0
+>>>>>>> 22e9e621a1208a0218806fff7ecd67ae10e62067
+gunicorn

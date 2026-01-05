@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.git
+.gitignore
+README.md
+.dockerignore
+Dockerfile
+*.log
+.DS_Store
+deploy_and_test.sh
+test_endpoint.py
