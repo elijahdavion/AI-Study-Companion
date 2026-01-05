@@ -20,16 +20,21 @@ if PROJECT_ID:
 
 # --- Tool Definition für Data Store ---
 tools = []
-if PROJECT_ID:
-    # Definiere das Retrieval-Tool für Vertex AI Search
-    datastore_tool = Tool.from_retrieval(
-        retrieval=grounding.Retrieval(
-            source=grounding.VertexAISearch(
-                datastore=DATA_STORE_ID
+if PROJECT_ID and DATA_STORE_ID:
+    try:
+        # Definiere das Retrieval-Tool für Vertex AI Search
+        datastore_tool = Tool.from_retrieval(
+            retrieval=grounding.Retrieval(
+                source=grounding.VertexAISearch(
+                    datastore=DATA_STORE_ID
+                )
             )
         )
-    )
-    tools = [datastore_tool]
+        tools = [datastore_tool]
+    except Exception as e:
+        import logging
+        logging.error(f"Fehler beim Initialisieren des Data Store Tools: {e}")
+        tools = []
 
 # --- Spezifischer Prompt (System Instruction) ---
 SYSTEM_PROMPT = """
@@ -72,6 +77,13 @@ def home():
     Startseite mit Web-Interface.
     """
     return render_template("index.html")
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Health check endpoint für Cloud Run.
+    """
+    return jsonify({"status": "healthy"}), 200
 
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -261,5 +273,14 @@ WICHTIG: Die "Thematische Übersicht" muss ALLE Hauptkapitel des Skripts abdecke
         return jsonify({"error": "Interner Serverfehler", "details": str(e)}), 500
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Starting AI Study Companion")
+    logger.info(f"GCP_PROJECT_ID: {PROJECT_ID}")
+    logger.info(f"DATA_STORE_ID configured: {bool(DATA_STORE_ID)}")
+    logger.info(f"Tools initialized: {len(tools) > 0}")
+    
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
