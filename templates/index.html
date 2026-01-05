@@ -53,7 +53,7 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             margin-bottom: 30px;
         }
 
@@ -61,12 +61,6 @@
             color: #667eea;
             font-size: 2.5em;
             margin: 0;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .header h1:hover {
-            transform: scale(1.05);
         }
 
         .screen {
@@ -348,60 +342,7 @@
             color: white;
         }
 
-        .files-list {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            background: white;
-        }
 
-        .file-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e0e0e0;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .file-item:last-child {
-            border-bottom: none;
-        }
-
-        .file-item:hover {
-            background: #f8f9fa;
-        }
-
-        .file-item.selected {
-            background: #e8f4f8;
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .file-name {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-size: 0.95em;
-        }
-
-        .file-date {
-            font-size: 0.85em;
-            color: #999;
-            margin-left: 10px;
-            white-space: nowrap;
-        }
-
-        .no-files {
-            padding: 20px;
-            text-align: center;
-            color: #999;
-        }
-
-        @media (max-width: 600px) {
             .container {
                 padding: 25px;
             }
@@ -451,7 +392,6 @@
                 <select id="fileDropdown" onchange="selectFileFromDropdown()">
                     <option value="">-- Datei auswählen --</option>
                 </select>
-                <div id="filesList" class="files-list" style="margin-top: 10px; display: none;"></div>
             </div>
 
             <button id="analyzeBtn" onclick="analyzeDocument()">
@@ -546,60 +486,25 @@
 
                 if (response.ok && data.files) {
                     const dropdown = document.getElementById('fileDropdown');
-                    const filesList = document.getElementById('filesList');
                     
                     // Clear existing options (except the first one)
                     dropdown.innerHTML = '<option value="">-- Datei auswählen --</option>';
                     
-                    let filesHtml = '';
-                    if (data.files.length === 0) {
-                        filesHtml = '<div class="no-files">Keine Dateien im Bucket</div>';
-                    } else {
+                    if (data.files.length > 0) {
                         data.files.forEach(file => {
-                            const date = new Date(file.created).toLocaleDateString('de-DE');
                             const fileName = file.name.split('/').pop();
-                            
                             dropdown.innerHTML += `<option value="${file.gs_path}">${fileName}</option>`;
-                            
-                            filesHtml += `<div class="file-item" onclick="selectFile('${file.gs_path}', '${fileName}')">
-                                <span class="file-name">${fileName}</span>
-                                <span class="file-date">${date}</span>
-                            </div>`;
                         });
                     }
-                    
-                    filesList.innerHTML = filesHtml;
-                    filesList.style.display = data.files.length > 0 ? 'block' : 'none';
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Dateien:', error);
             }
         }
 
-        function selectFile(gsPath, fileName) {
-            selectedFile = gsPath;
-            const fileItems = document.querySelectorAll('.file-item');
-            fileItems.forEach(item => item.classList.remove('selected'));
-            event.target.closest('.file-item').classList.add('selected');
-        }
-
         function selectFileFromDropdown() {
             const dropdown = document.getElementById('fileDropdown');
             selectedFile = dropdown.value;
-            
-            // Update visual selection in file list
-            if (selectedFile) {
-                const fileItems = document.querySelectorAll('.file-item');
-                fileItems.forEach(item => {
-                    const itemPath = item.getAttribute('onclick').match(/'([^']+)'/)[1];
-                    if (itemPath === selectedFile) {
-                        item.classList.add('selected');
-                    } else {
-                        item.classList.remove('selected');
-                    }
-                });
-            }
-        }
 
         async function uploadPdf() {
             const file = pdfFileInput.files[0];

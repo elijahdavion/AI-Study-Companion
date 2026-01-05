@@ -259,14 +259,19 @@ def analyze_script():
         
         
         # Der Prompt muss das Modell anweisen, das Tool zu benutzen
-        user_prompt = f"""Analysiere die Datei '{file_name}' vollständig.
-        
-Deine Aufgabe ist eine UMFASSENDE Analyse des GESAMTEN Dokuments.
-1. Identifiziere ZUERST alle Kapitel und Hauptthemen aus dem Inhaltsverzeichnis oder der Struktur.
-2. Gehe JEDES Kapitel durch und extrahiere die Kerninhalte.
-3. Erstelle daraus die drei geforderten Abschnitte (Zusammenfassung, Themenübersicht, Lernziele).
+        user_prompt = f"""Du musst die EXAKTE Datei '{file_name}' analysieren. KEINE andere Datei!
 
-WICHTIG: Die "Thematische Übersicht" muss ALLE Hauptkapitel des Skripts abdecken, nicht nur den Anfang oder Ausschnitte! Nutze das Data Store Tool mehrfach oder umfassend, um alles zu finden."""
+KRITISCH: Der Dateiname ist '{file_name}'. Stelle sicher, dass die Inhalte aus GENAU DIESER Datei stammen, nicht aus einer anderen.
+
+Deine Aufgabe ist eine UMFASSENDE und GENAUE Analyse des GESAMTEN Inhalts dieser Datei:
+1. Nutze das Retrieval-Tool, um ALLE Inhalte aus '{file_name}' abzurufen
+2. Identifiziere ALLE Kapitel und Hauptthemen aus dem Inhaltsverzeichnis oder der Struktur
+3. Gehe systematisch JEDES Kapitel durch und extrahiere die exakten Kerninhalte
+4. Erstelle daraus die drei geforderten Abschnitte (Zusammenfassung, Themenübersicht, Lernziele)
+
+WARNUNG: Falls das Tool Inhalte aus einer anderen Datei liefert (z.B. einem anderen PDF), lehne ab und teile mit, dass die Daten nicht aus '{file_name}' stammen.
+
+Die "Thematische Übersicht" muss ALLE Hauptkapitel aus '{file_name}' abdecken."""
 
         # Initialisiere das Modell mit den Tools
         model = GenerativeModel(
