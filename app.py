@@ -78,6 +78,42 @@ def health_check():
     """
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/check-indexing/<path:filename>", methods=["GET"])
+def check_indexing_status(filename):
+    """
+    Prüft, ob ein Dokument in Discovery Engine indexiert wurde.
+    """
+    try:
+        from google.cloud.discoveryengine_v1 import DocumentServiceClient
+        
+        client = DocumentServiceClient()
+        datastore_id = DATA_STORE_ID.split('/')[-1] if '/' in DATA_STORE_ID else DATA_STORE_ID
+        parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{datastore_id}"
+        
+        # Erstelle Dokument-ID basierend auf Dateinamen
+        doc_id = filename.replace("/", "-").replace(".", "-")
+        doc_name = f"{parent}/documents/{doc_id}"
+        
+        try:
+            document = client.get_document(name=doc_name)
+            return jsonify({
+                "indexed": True,
+                "document_id": doc_id,
+                "filename": filename,
+                "status": "Document is indexed"
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "indexed": False,
+                "document_id": doc_id,
+                "filename": filename,
+                "status": f"Document not found in index: {str(e)}"
+            }), 404
+            
+    except Exception as e:
+        app.logger.error(f"Fehler beim Prüfen des Indexierungsstatus: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/list-files", methods=["GET"])
 def list_files():
     """
@@ -157,10 +193,11 @@ def upload_pdf():
         # Triggere automatische Indexierung
         try:
             trigger_indexing(unique_filename)
-            indexing_message = "Datei erfolgreich hochgeladen. Indexierung läuft... (5-30 Minuten)"
+            indexing_message = "Datei erfolgreich hochgeladen und Indexierung gestartet. Indexierung benötigt 5-30 Minuten."
+            app.logger.info(f"✓ Upload und Indexierung erfolgreich für {unique_filename}")
         except Exception as e:
-            app.logger.warning(f"Indexierung konnte nicht triggert werden: {e}")
-            indexing_message = "Datei hochgeladen, aber Indexierung konnte nicht gestartet werden."
+            app.logger.error(f"❌ Indexierung fehlgeschlagen für {unique_filename}: {e}")
+            indexing_message = f"Datei hochgeladen, aber Indexierung fehlgeschlagen: {str(e)}. Bitte prüfen Sie die Cloud Run Logs."
 
         return jsonify({
             "success": True,
@@ -337,9 +374,16 @@ def search_document_content(filename, query_text, max_results=10):
                 )
                 response_no_filter = client.search(request=request_no_filter)
                 
+                result_count_no_filter = 0
                 for result in response_no_filter.results:
+                    result_count_no_filter += 1
                     if hasattr(result, 'document'):
                         doc = result.document
+                        # Log welche Dokumente gefunden wurden
+                        if hasattr(doc, 'struct_data'):
+                            struct_data = dict(doc.struct_data)
+                            app.logger.info(f"Found document: {struct_data.get('filename', 'unknown')}")
+                        
                         if hasattr(doc, 'derived_struct_data'):
                             derived_data = doc.derived_struct_data
                             if 'snippets' in derived_data:
@@ -347,7 +391,12 @@ def search_document_content(filename, query_text, max_results=10):
                                     if 'snippet' in snippet:
                                         results.append(snippet['snippet'])
                 
-                app.logger.info(f"Fallback search found {len(results)} results")
+                app.logger.info(f"Fallback search found {result_count_no_filter} documents, extracted {len(results)} text chunks")
+                
+                # Wenn immernoch keine Ergebnisse, zeige was verfügbar ist
+                if len(results) == 0:
+                    app.logger.error(f"NO DOCUMENTS FOUND AT ALL in datastore. The datastore might be empty or indexing hasn't started.")
+                
             except Exception as e:
                 app.logger.error(f"Fallback search also failed: {e}")
         
@@ -363,50 +412,61 @@ def search_document_content(filename, query_text, max_results=10):
 def trigger_indexing(gcs_path):
     """
     Triggert die automatische Indexierung für die hochgeladene Datei mit Metadaten.
+    Verwendet import_documents statt create_document für bessere Zuverlässigkeit.
     """
     try:
-        client = discoveryengine_v1.DocumentServiceClient()
-        
-        # Extrahiere Data Store ID Komponenten
-        # Format: projects/{project}/locations/{location}/collections/default_collection/dataStores/{datastore_id}
-        parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{DATA_STORE_ID.split('/')[-1]}"
+        app.logger.info(f"Starting indexing for: {gcs_path}")
+        app.logger.info(f"PROJECT_ID: {PROJECT_ID}")
+        app.logger.info(f"REGION: {REGION}")
+        app.logger.info(f"DATA_STORE_ID: {DATA_STORE_ID}")
         
         # Extrahiere Metadaten aus dem Dateinamen
         metadata = extract_document_metadata(gcs_path)
+        app.logger.info(f"Extracted metadata: {metadata}")
         
-        # Erstelle ein Dokument-Objekt
-        from google.cloud.discoveryengine_v1.types import Document
-        from google.protobuf.struct_pb2 import Struct
+        # Versuche import_documents statt create_document
+        # Dies ist zuverlässiger für GCS-basierte Datenquellen
+        from google.cloud.discoveryengine_v1 import DocumentServiceClient
+        from google.cloud.discoveryengine_v1.types import ImportDocumentsRequest, GcsSource
         
-        # Erstelle structured_data mit Metadaten
-        structured_data = Struct()
-        structured_data.update({
-            "title": gcs_path,
-            "filename": metadata["filename"],
-            "topic": metadata["topic"],
-            "chapter": metadata["chapter"],
-            "upload_date": datetime.now().isoformat()
-        })
+        client = DocumentServiceClient()
         
-        document = Document(
-            id=gcs_path.replace("/", "-").replace(".", "-"),
-            structured_data=structured_data,
-            raw_document=discoveryengine_v1.RawDocument(
-                file_type_=discoveryengine_v1.RawDocument.FileType.PDF,
-                file_data=discoveryengine_v1.FileData(
-                    mime_type="application/pdf",
-                    gcs_uri=f"gs://{GCS_BUCKET_NAME}/{gcs_path}"
-                )
-            )
+        # Extrahiere Data Store ID
+        datastore_id = DATA_STORE_ID.split('/')[-1] if '/' in DATA_STORE_ID else DATA_STORE_ID
+        parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{datastore_id}/branches/default_branch"
+        
+        app.logger.info(f"Parent path: {parent}")
+        app.logger.info(f"GCS URI: gs://{GCS_BUCKET_NAME}/{gcs_path}")
+        
+        # Erstelle GCS Source
+        gcs_source = GcsSource(
+            input_uris=[f"gs://{GCS_BUCKET_NAME}/{gcs_path}"],
+            data_schema="custom"  # Verwende custom schema für Metadaten
         )
         
-        # Erstelle oder update das Dokument im Data Store
-        operation = client.create_document(request={"parent": parent, "document": document})
-        app.logger.info(f"Indexierung gestartet für {gcs_path} mit Metadaten: {metadata}")
-        app.logger.info(f"Operation: {operation.name}")
+        # Erstelle Import Request
+        request = ImportDocumentsRequest(
+            parent=parent,
+            gcs_source=gcs_source,
+            reconciliation_mode=ImportDocumentsRequest.ReconciliationMode.INCREMENTAL,
+        )
+        
+        # Starte Import Operation
+        operation = client.import_documents(request=request)
+        
+        app.logger.info(f"✓ Indexierung erfolgreich gestartet für {gcs_path}")
+        app.logger.info(f"Operation name: {operation.operation.name}")
+        app.logger.info(f"Metadaten: filename={metadata['filename']}, topic={metadata['topic']}, chapter={metadata['chapter']}")
+        
+        return True
         
     except Exception as e:
-        app.logger.error(f"Fehler beim Triggern der Indexierung: {e}")
+        app.logger.error(f"❌ FEHLER beim Triggern der Indexierung für {gcs_path}")
+        app.logger.error(f"Error type: {type(e).__name__}")
+        app.logger.error(f"Error message: {str(e)}")
+        import traceback
+        app.logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        # Re-raise so upload endpoint can catch it
         raise
 
 @app.route("/analyze", methods=["POST"])
@@ -457,10 +517,12 @@ def analyze_script():
         document_chunks = search_document_content(actual_filename, search_query, max_results=20)
         
         if not document_chunks:
-            error_msg = f"Keine Inhalte für Datei '{actual_filename}' gefunden. Mögliche Ursachen: 1) Indexierung noch nicht abgeschlossen (5-30 Minuten nach Upload), 2) Dateiname stimmt nicht überein, 3) Dokument wurde nicht korrekt indexiert."
+            error_msg = f"Keine Inhalte für Datei '{actual_filename}' gefunden. Das Dokument wurde vermutlich noch nicht indexiert. Bitte warten Sie 5-30 Minuten nach dem Upload und versuchen Sie es erneut."
             app.logger.error(error_msg)
+            app.logger.error(f"Upload time vs. now: Check if document was uploaded recently")
             return jsonify({
-                "error": error_msg
+                "error": error_msg,
+                "indexing_info": "Discovery Engine benötigt 5-30 Minuten um hochgeladene Dokumente zu indexieren. Bitte warten Sie und versuchen Sie es später erneut."
             }), 404
         
         # Kombiniere die gefundenen Chunks zu einem Kontext

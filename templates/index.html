@@ -343,13 +343,13 @@
         }
 
 
-            .container {
-                padding: 25px;
-            }
+        .container {
+            padding: 25px;
+        }
 
-            .header h1 {
-                font-size: 2em;
-            }
+        .header h1 {
+            font-size: 2em;
+        }
         }
     </style>
 </head>
@@ -404,7 +404,7 @@
         <!-- Analysis Screen -->
         <div class="screen analysis-screen" id="analysisScreen">
             <button class="back-button" onclick="goHome()">← Zurück zur Startseite</button>
-            
+
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
@@ -436,7 +436,7 @@
         const uploadBtn = document.getElementById('uploadBtn');
 
         // Handle file selection
-        pdfFileInput.addEventListener('change', function() {
+        pdfFileInput.addEventListener('change', function () {
             if (this.files && this.files[0]) {
                 const file = this.files[0];
                 fileNameDisplay.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
@@ -446,7 +446,7 @@
 
         // Handle drag and drop
         const uploadSection = document.querySelector('.upload-section');
-        
+
         uploadSection.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadSection.style.background = '#e8f4ff';
@@ -462,7 +462,7 @@
             e.preventDefault();
             uploadSection.style.background = '#f0f4ff';
             uploadSection.style.borderColor = '#667eea';
-            
+
             const files = e.dataTransfer.files;
             if (files && files[0]) {
                 pdfFileInput.files = files;
@@ -486,10 +486,10 @@
 
                 if (response.ok && data.files) {
                     const dropdown = document.getElementById('fileDropdown');
-                    
+
                     // Clear existing options (except the first one)
                     dropdown.innerHTML = '<option value="">-- Datei auswählen --</option>';
-                    
+
                     if (data.files.length > 0) {
                         data.files.forEach(file => {
                             const fileName = file.name.split('/').pop();
@@ -560,17 +560,17 @@
                     }
                 });
 
-                xhr.addEventListener('load', function() {
+                xhr.addEventListener('load', function () {
                     if (xhr.status === 200) {
                         const response = JSON.parse(xhr.responseText);
-                        
+
                         progressFill.style.width = '100%';
                         uploadStatus.textContent = `✓ ${response.filename}`;
                         uploadStatus.className = 'upload-status success';
-                        
+
                         // Select the uploaded file
                         selectedFile = response.gcs_path;
-                        
+
                         // Reload files list
                         setTimeout(() => {
                             loadFilesList();
@@ -585,7 +585,7 @@
                     }
                 });
 
-                xhr.addEventListener('error', function() {
+                xhr.addEventListener('error', function () {
                     throw new Error('Netzwerkfehler beim Upload');
                 });
 
@@ -612,7 +612,7 @@
 
             // Switch to analysis screen
             switchScreen('analysisScreen');
-            
+
             const loadingDiv = document.getElementById('loading');
             const resultsDiv = document.getElementById('results');
             const errorDiv = document.getElementById('analysisError');
@@ -629,7 +629,7 @@
 
             try {
                 console.log('Analyzing file:', selectedFile);
-                
+
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: {
@@ -654,7 +654,7 @@
                 // Display results
                 let html = convertMarkdownToHtml(data.analysis_result);
                 console.log('Generated HTML length:', html.length);
-                
+
                 resultsDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
 
@@ -665,7 +665,16 @@
 
             } catch (error) {
                 console.error('Analysis error:', error);
-                errorDiv.textContent = `❌ Fehler: ${error.message}`;
+
+                // Show error message
+                let errorMessage = `❌ Fehler: ${error.message}`;
+
+                // Add indexing info if available in response
+                if (error.message.includes('indexiert')) {
+                    errorMessage += '\n\n⏳ Hinweis: Nach dem Upload benötigt Discovery Engine 5-30 Minuten zur Indexierung. Bitte warten Sie und versuchen Sie es später erneut.';
+                }
+
+                errorDiv.innerHTML = errorMessage.replace(/\n/g, '<br>');
                 errorDiv.classList.add('active');
                 errorDiv.style.display = 'block';
                 resultsDiv.style.display = 'none';
