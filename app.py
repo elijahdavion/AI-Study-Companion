@@ -187,6 +187,53 @@ def upload_pdf():
         app.logger.error(f"Fehler beim Datei-Upload: {e}")
         return jsonify({"error": "Interner Serverfehler beim Upload", "details": str(e)}), 500
 
+def extract_document_metadata(filename):
+    """
+    Extrahiert Metadaten aus dem Dateinamen.
+    Format: YYYY-MM-DD_KapitelX_Topic_Date_Version.pdf
+    Gibt ein Dict mit chapter, topic, date, version zurück.
+    """
+    metadata = {
+        "filename": filename,
+        "chapter": "",
+        "topic": "",
+        "date": "",
+        "version": ""
+    }
+    
+    try:
+        # Entferne .pdf Extension
+        name_without_ext = filename.replace('.pdf', '')
+        parts = name_without_ext.split('_')
+        
+        # Extrahiere Datum (erstes Teil im Format YYYY-MM-DD)
+        if len(parts) > 0 and re.match(r'\d{4}-\d{2}-\d{2}', parts[0]):
+            metadata["date"] = parts[0]
+        
+        # Suche nach Kapitel und Topic
+        for i, part in enumerate(parts):
+            if part.startswith('Kapitel') or part.startswith('kapitel'):
+                metadata["chapter"] = part
+                # Nächster Teil ist oft das Topic
+                if i + 1 < len(parts):
+                    metadata["topic"] = parts[i + 1]
+                break
+        
+        # Falls kein Kapitel gefunden, nutze zweiten Teil als Topic
+        if not metadata["topic"] and len(parts) > 1:
+            metadata["topic"] = parts[1]
+        
+        # Suche nach Version (vX.Y Format)
+        for part in parts:
+            if re.match(r'v\d+\.\d+', part, re.IGNORECASE):
+                metadata["version"] = part
+                break
+                
+    except Exception as e:
+        app.logger.warning(f"Fehler beim Extrahieren von Metadaten aus {filename}: {e}")
+    
+    return metadata
+
 def generate_unique_filename(original_name, timestamp):
     """
     Generiert einen eindeutigen Dateinamen mit Timestamp-Präfix.
@@ -217,7 +264,7 @@ def generate_unique_filename(original_name, timestamp):
 
 def trigger_indexing(gcs_path):
     """
-    Triggert die automatische Indexierung für die hochgeladene Datei.
+    Triggert die automatische Indexierung für die hochgeladene Datei mit Metadaten.
     """
     try:
         client = discoveryengine_v1.DocumentServiceClient()
@@ -226,12 +273,26 @@ def trigger_indexing(gcs_path):
         # Format: projects/{project}/locations/{location}/collections/default_collection/dataStores/{datastore_id}
         parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{DATA_STORE_ID.split('/')[-1]}"
         
+        # Extrahiere Metadaten aus dem Dateinamen
+        metadata = extract_document_metadata(gcs_path)
+        
         # Erstelle ein Dokument-Objekt
         from google.cloud.discoveryengine_v1.types import Document
+        from google.protobuf.struct_pb2 import Struct
+        
+        # Erstelle structured_data mit Metadaten
+        structured_data = Struct()
+        structured_data.update({
+            "title": gcs_path,
+            "filename": metadata["filename"],
+            "topic": metadata["topic"],
+            "chapter": metadata["chapter"],
+            "upload_date": datetime.now().isoformat()
+        })
         
         document = Document(
             id=gcs_path.replace("/", "-").replace(".", "-"),
-            structured_data={"title": gcs_path},
+            structured_data=structured_data,
             raw_document=discoveryengine_v1.RawDocument(
                 file_type_=discoveryengine_v1.RawDocument.FileType.PDF,
                 file_data=discoveryengine_v1.FileData(
@@ -243,7 +304,8 @@ def trigger_indexing(gcs_path):
         
         # Erstelle oder update das Dokument im Data Store
         operation = client.create_document(request={"parent": parent, "document": document})
-        app.logger.info(f"Indexierung gestartet für {gcs_path}: Operation {operation.name}")
+        app.logger.info(f"Indexierung gestartet für {gcs_path} mit Metadaten: {metadata}")
+        app.logger.info(f"Operation: {operation.name}")
         
     except Exception as e:
         app.logger.error(f"Fehler beim Triggern der Indexierung: {e}")
@@ -286,25 +348,36 @@ def analyze_script():
         if not main_topic:
             main_topic = display_name
         
-        # Der Prompt muss das Modell anweisen, das Tool zu benutzen
-        user_prompt = f"""Du analysierst AUSSCHLIESSLICH die Datei: {display_name}
+        # Extrahiere den tatsächlichen Dateinamen für bessere Filterung
+        actual_filename = file_name.split('/')[-1] if '/' in file_name else file_name
+        
+        # Der Prompt muss das Modell anweisen, das Tool zu benutzen MIT dem Dateinamen
+        user_prompt = f"""Du analysierst AUSSCHLIESSLICH die spezifische Datei mit dem Namen: "{actual_filename}"
 
-Die Datei behandelt das Thema: "{main_topic}"
+Angezeigter Name: {display_name}
+Erwartetes Thema: "{main_topic}"
 
 WICHTIG - QUALITÄTSKONTROLLE:
-1. Nutze das Retrieval-Tool um Inhalte abzurufen
-2. ÜBERPRÜFE SOFORT: Behandeln die abgerufenen Inhalte das Thema "{main_topic}"?
-3. WENN NICHT (z.B. wenn sie von "Bildaufnahme", "Kamerasensoren" oder anderen Themen sprechen):
+1. Nutze das Retrieval-Tool und suche EXPLIZIT nach Inhalten aus der Datei "{actual_filename}"
+2. ÜBERPRÜFE SOFORT: 
+   - Stammen die abgerufenen Inhalte aus der Datei "{actual_filename}"?
+   - Behandeln sie das Thema "{main_topic}"?
+3. WENN NICHT (z.B. wenn sie aus anderen Dateien stammen oder andere Themen behandeln):
    → Lehne sofort ab und antworte: "Die Datei '{display_name}' konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
 4. WENN JA, fahre fort mit der vollständigen Analyse
 
+Suchkontext für Retrieval:
+- Dateiname: "{actual_filename}"
+- Thema: "{main_topic}"
+- Kapitel: {topic_parts[1] if len(topic_parts) > 1 and topic_parts[1].startswith('Kapitel') else 'keine Angabe'}
+
 Deine Aufgabe ist die UMFASSENDE Analyse:
-1. Identifiziere ALLE Kapitel und Hauptthemen
+1. Identifiziere ALLE Kapitel und Hauptthemen aus "{actual_filename}"
 2. Gehe systematisch JEDES Kapitel durch
 3. Extrahiere die Kerninhalte
 4. Erstelle Zusammenfassung, Themenübersicht und Lernziele
 
-Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen."""
+Die Analyse muss sich AUSSCHLIESSLICH auf Inhalte aus "{actual_filename}" zum Thema "{main_topic}" beziehen."""
 
         # Initialisiere das Modell mit den Tools
         model = GenerativeModel(
