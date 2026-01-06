@@ -170,7 +170,7 @@ def upload_pdf():
             return jsonify({"error": "Nur PDF-Dateien sind erlaubt."}), 400
 
         if file.content_type not in ["application/pdf", "application/octet-stream"]:
-            return jsonify({"error": "Ungültiger Dateityp. Bitte laden Sie eine PDF-Datei hoch."}), 400
+            return jsonify({"error": "Ungültiger Dateityp. Bitte laden Sie eine PDF-Datewiei hoch."}), 400
 
         # Lese Datei in den Speicher
         file_content = file.read()
@@ -429,7 +429,7 @@ def trigger_indexing(gcs_path):
         # Versuche import_documents statt create_document
         # Dies ist zuverlässiger für GCS-basierte Datenquellen
         from google.cloud.discoveryengine_v1 import DocumentServiceClient
-        from google.cloud.discoveryengine_v1.types import ImportDocumentsRequest, GcsSource
+        from google.cloud.discoveryengine_v1.types import Document
         
         client = DocumentServiceClient()
         
@@ -442,24 +442,27 @@ def trigger_indexing(gcs_path):
         app.logger.info(f"Parent path: {parent}")
         app.logger.info(f"GCS URI: gs://{GCS_BUCKET_NAME}/{gcs_path}")
         
-        # Erstelle GCS Source
-        gcs_source = GcsSource(
-            input_uris=[f"gs://{GCS_BUCKET_NAME}/{gcs_path}"],
-            data_schema="custom"  # Verwende custom schema für Metadaten
+        # Generiere ID konsistent zu check_indexing_status
+        doc_id = gcs_path.replace("/", "-").replace(".", "-")
+        
+        # Erstelle Dokument Objekt
+        document = Document(
+            content_uri=f"gs://{GCS_BUCKET_NAME}/{gcs_path}",
+            id=doc_id,
+            struct_data=metadata,  # Metadaten als Structured Data
         )
         
-        # Erstelle Import Request
-        request = ImportDocumentsRequest(
+        # Erstelle Dokument direkt (synchron)
+        # Dies ermöglicht die Verwendung einer expliziten ID und Metadaten
+        response = client.create_document(
             parent=parent,
-            gcs_source=gcs_source,
-            reconciliation_mode=ImportDocumentsRequest.ReconciliationMode.INCREMENTAL,
+            document=document,
+            document_id=doc_id
         )
         
-        # Starte Import Operation
-        operation = client.import_documents(request=request)
+        app.logger.info(f"✓ Indexierung (create_document) erfolgreich für {gcs_path}")
+        app.logger.info(f"Document Name: {response.name}")
         
-        app.logger.info(f"✓ Indexierung erfolgreich gestartet für {gcs_path}")
-        app.logger.info(f"Operation name: {operation.operation.name}")
         app.logger.info(f"Metadaten: filename={metadata['filename']}, topic={metadata['topic']}, chapter={metadata['chapter']}")
         
         return True
