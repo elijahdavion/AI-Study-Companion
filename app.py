@@ -18,23 +18,9 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 if PROJECT_ID:
     vertexai.init(project=PROJECT_ID, location=REGION)
 
-# --- Tool Definition für Data Store ---
-tools = []
-if PROJECT_ID and DATA_STORE_ID:
-    try:
-        # Definiere das Retrieval-Tool für Vertex AI Search
-        datastore_tool = Tool.from_retrieval(
-            retrieval=grounding.Retrieval(
-                source=grounding.VertexAISearch(
-                    datastore=DATA_STORE_ID
-                )
-            )
-        )
-        tools = [datastore_tool]
-    except Exception as e:
-        import logging
-        logging.error(f"Fehler beim Initialisieren des Data Store Tools: {e}")
-        tools = []
+# --- Removed generic retrieval tool - using direct search API instead ---
+# The Tool.from_retrieval() approach searches ALL documents without filtering.
+# We'll use Discovery Engine Search API directly with filter expressions.
 
 # --- Spezifischer Prompt (System Instruction) ---
 SYSTEM_PROMPT = """
@@ -262,6 +248,63 @@ def generate_unique_filename(original_name, timestamp):
         # Fallback auf Timestamp allein
         return f"{timestamp}_{original_name}_{int(datetime.now().timestamp())}.pdf"
 
+def search_document_content(filename, query_text, max_results=10):
+    """
+    Sucht nach Inhalten in einem spezifischen Dokument mittels Discovery Engine Search API.
+    Verwendet Filter-Expressions um nur das angegebene Dokument zu durchsuchen.
+    """
+    try:
+        from google.cloud.discoveryengine_v1 import SearchServiceClient
+        from google.cloud.discoveryengine_v1.types import SearchRequest
+        
+        client = SearchServiceClient()
+        
+        # Extrahiere Data Store ID
+        datastore_id = DATA_STORE_ID.split('/')[-1] if '/' in DATA_STORE_ID else DATA_STORE_ID
+        serving_config = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{datastore_id}/servingConfigs/default_config"
+        
+        # Erstelle Filter-Expression für das spezifische Dokument
+        # Format: filename: "exact_filename.pdf"
+        filter_expr = f'filename: "{filename}"'
+        
+        app.logger.info(f"Searching with filter: {filter_expr}")
+        app.logger.info(f"Query: {query_text}")
+        
+        # Erstelle Search Request
+        request = SearchRequest(
+            serving_config=serving_config,
+            query=query_text,
+            filter=filter_expr,
+            page_size=max_results,
+        )
+        
+        # Führe Suche aus
+        response = client.search(request=request)
+        
+        # Sammle Ergebnisse
+        results = []
+        for result in response.results:
+            if hasattr(result, 'document'):
+                doc = result.document
+                # Extrahiere Text-Snippets aus dem Dokument
+                if hasattr(doc, 'derived_struct_data'):
+                    derived_data = doc.derived_struct_data
+                    if 'extractive_answers' in derived_data:
+                        for answer in derived_data['extractive_answers']:
+                            if 'content' in answer:
+                                results.append(answer['content'])
+                    elif 'snippets' in derived_data:
+                        for snippet in derived_data['snippets']:
+                            if 'snippet' in snippet:
+                                results.append(snippet['snippet'])
+        
+        app.logger.info(f"Found {len(results)} results for {filename}")
+        return results
+        
+    except Exception as e:
+        app.logger.error(f"Fehler bei der Dokumentensuche: {e}")
+        return []
+
 def trigger_indexing(gcs_path):
     """
     Triggert die automatische Indexierung für die hochgeladene Datei mit Metadaten.
@@ -351,39 +394,41 @@ def analyze_script():
         # Extrahiere den tatsächlichen Dateinamen für bessere Filterung
         actual_filename = file_name.split('/')[-1] if '/' in file_name else file_name
         
-        # Der Prompt muss das Modell anweisen, das Tool zu benutzen MIT dem Dateinamen
-        user_prompt = f"""Du analysierst AUSSCHLIESSLICH die spezifische Datei mit dem Namen: "{actual_filename}"
+        # Suche direkt nach Inhalten aus dem spezifischen Dokument
+        search_query = f"Analysiere das Dokument über {main_topic}"
+        document_chunks = search_document_content(actual_filename, search_query, max_results=20)
+        
+        if not document_chunks:
+            return jsonify({
+                "error": f"Keine Inhalte für Datei '{actual_filename}' gefunden. Möglicherweise ist die Indexierung noch nicht abgeschlossen (5-30 Minuten nach Upload)."
+            }), 404
+        
+        # Kombiniere die gefundenen Chunks zu einem Kontext
+        document_context = "\n\n".join(document_chunks[:15])  # Limitiere auf erste 15 Chunks
+        
+        app.logger.info(f"Retrieved {len(document_chunks)} chunks, using first 15")
+        
+        # Erstelle Prompt mit dem tatsächlichen Dokumentinhalt
+        user_prompt = f"""Du analysierst die Datei: "{actual_filename}"
 
-Angezeigter Name: {display_name}
 Erwartetes Thema: "{main_topic}"
 
-WICHTIG - QUALITÄTSKONTROLLE:
-1. Nutze das Retrieval-Tool und suche EXPLIZIT nach Inhalten aus der Datei "{actual_filename}"
-2. ÜBERPRÜFE SOFORT: 
-   - Stammen die abgerufenen Inhalte aus der Datei "{actual_filename}"?
-   - Behandeln sie das Thema "{main_topic}"?
-3. WENN NICHT (z.B. wenn sie aus anderen Dateien stammen oder andere Themen behandeln):
-   → Lehne sofort ab und antworte: "Die Datei '{display_name}' konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
-4. WENN JA, fahre fort mit der vollständigen Analyse
+Hier sind die relevanten Inhalte aus dem Dokument:
 
-Suchkontext für Retrieval:
-- Dateiname: "{actual_filename}"
-- Thema: "{main_topic}"
-- Kapitel: {topic_parts[1] if len(topic_parts) > 1 and topic_parts[1].startswith('Kapitel') else 'keine Angabe'}
+{document_context}
 
-Deine Aufgabe ist die UMFASSENDE Analyse:
-1. Identifiziere ALLE Kapitel und Hauptthemen aus "{actual_filename}"
+Deine Aufgabe ist die UMFASSENDE Analyse basierend auf diesen Inhalten:
+1. Identifiziere ALLE Kapitel und Hauptthemen
 2. Gehe systematisch JEDES Kapitel durch
 3. Extrahiere die Kerninhalte
 4. Erstelle Zusammenfassung, Themenübersicht und Lernziele
 
-Die Analyse muss sich AUSSCHLIESSLICH auf Inhalte aus "{actual_filename}" zum Thema "{main_topic}" beziehen."""
+Die Analyse muss sich AUSSCHLIESSLICH auf die oben bereitgestellten Inhalte beziehen."""
 
-        # Initialisiere das Modell mit den Tools
+        # Initialisiere das Modell OHNE Retrieval Tool (wir haben bereits die Inhalte)
         model = GenerativeModel(
             model_name='gemini-2.5-pro',
-            system_instruction=SYSTEM_PROMPT,
-            tools=tools
+            system_instruction=SYSTEM_PROMPT
         )
 
         # Generiere den Inhalt
@@ -396,20 +441,13 @@ Die Analyse muss sich AUSSCHLIESSLICH auf Inhalte aus "{actual_filename}" zum Th
                 if part.text:
                     full_text += part.text
 
-        # Extrahiere Quellen (falls vorhanden)
-        used_sources = []
-        if response.candidates and response.candidates[0].grounding_metadata.grounding_chunks:
-            for chunk in response.candidates[0].grounding_metadata.grounding_chunks:
-                # Vertex AI Search liefert 'retrieved_context'
-                if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
-                    used_sources.append(chunk.retrieved_context.uri)
-                # Fallback für Web Search (falls jemals genutzt)
-                elif hasattr(chunk, "web") and chunk.web:
-                    used_sources.append(chunk.web.uri)
+        # Quellen sind jetzt die Chunks, die wir explizit gesucht haben
+        used_sources = [f"gs://{GCS_BUCKET_NAME}/{actual_filename}"]
 
         return jsonify({
             "analysis_result": full_text,
-            "used_sources": used_sources
+            "used_sources": used_sources,
+            "chunks_found": len(document_chunks)
         }), 200
 
     except Exception as e:
@@ -424,7 +462,7 @@ if __name__ == "__main__":
     logger.info(f"Starting AI Study Companion")
     logger.info(f"GCP_PROJECT_ID: {PROJECT_ID}")
     logger.info(f"DATA_STORE_ID configured: {bool(DATA_STORE_ID)}")
-    logger.info(f"Tools initialized: {len(tools) > 0}")
+    logger.info(f"Using direct Discovery Engine search API (no generic retrieval tool)")
     
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
