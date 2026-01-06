@@ -296,8 +296,10 @@ def search_document_content(filename, query_text, max_results=10):
         
         client = SearchServiceClient()
         
-        # Extrahiere Data Store ID
+        # Extrahiere nur die Data Store ID (letzter Teil)
         datastore_id = DATA_STORE_ID.split('/')[-1] if '/' in DATA_STORE_ID else DATA_STORE_ID
+        
+        # WICHTIG: Verwende PROJECT_ID, nicht die Projekt-Nummer aus DATA_STORE_ID
         serving_config = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{datastore_id}/servingConfigs/default_config"
         
         # Erstelle Filter-Expression für das spezifische Dokument
