@@ -433,8 +433,10 @@ def trigger_indexing(gcs_path):
         
         client = DocumentServiceClient()
         
-        # Extrahiere Data Store ID
+        # Extrahiere nur die Data Store ID (letzter Teil)
         datastore_id = DATA_STORE_ID.split('/')[-1] if '/' in DATA_STORE_ID else DATA_STORE_ID
+        
+        # WICHTIG: Verwende PROJECT_ID, nicht die Projekt-Nummer aus DATA_STORE_ID
         parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{datastore_id}/branches/default_branch"
         
         app.logger.info(f"Parent path: {parent}")
