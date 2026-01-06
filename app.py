@@ -9,7 +9,7 @@ import re
 
 # --- Konfiguration ---
 PROJECT_ID = os.getenv("GCP_PROJECT_ID") 
-REGION = "europe-west1" 
+REGION = "global"  # Data store is in global region 
 DATA_STORE_ID = os.getenv("DATA_STORE_ID")
 GCS_BUCKET_NAME = "ai-study-companion-bucket"
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
