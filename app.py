@@ -269,6 +269,7 @@ def search_document_content(filename, query_text, max_results=10):
         
         app.logger.info(f"Searching with filter: {filter_expr}")
         app.logger.info(f"Query: {query_text}")
+        app.logger.info(f"Serving config: {serving_config}")
         
         # Erstelle Search Request
         request = SearchRequest(
@@ -283,26 +284,80 @@ def search_document_content(filename, query_text, max_results=10):
         
         # Sammle Ergebnisse
         results = []
-        for result in response.results:
-            if hasattr(result, 'document'):
-                doc = result.document
-                # Extrahiere Text-Snippets aus dem Dokument
-                if hasattr(doc, 'derived_struct_data'):
-                    derived_data = doc.derived_struct_data
-                    if 'extractive_answers' in derived_data:
-                        for answer in derived_data['extractive_answers']:
-                            if 'content' in answer:
-                                results.append(answer['content'])
-                    elif 'snippets' in derived_data:
-                        for snippet in derived_data['snippets']:
-                            if 'snippet' in snippet:
-                                results.append(snippet['snippet'])
+        result_count = 0
         
-        app.logger.info(f"Found {len(results)} results for {filename}")
+        for result in response.results:
+            result_count += 1
+            try:
+                if hasattr(result, 'document'):
+                    doc = result.document
+                    
+                    # Versuche verschiedene Quellen für Textinhalte
+                    # 1. Extractive Answers (beste Qualität)
+                    if hasattr(doc, 'derived_struct_data'):
+                        derived_data = doc.derived_struct_data
+                        
+                        if 'extractive_answers' in derived_data:
+                            for answer in derived_data['extractive_answers']:
+                                if 'content' in answer:
+                                    results.append(answer['content'])
+                        
+                        # 2. Snippets (gute Zusammenfassung)
+                        if 'snippets' in derived_data:
+                            for snippet in derived_data['snippets']:
+                                if 'snippet' in snippet:
+                                    results.append(snippet['snippet'])
+                        
+                        # 3. Link (Fallback für Struktur)
+                        if 'link' in derived_data:
+                            link_text = derived_data.get('link', '')
+                            if link_text and link_text not in results:
+                                results.append(link_text)
+                    
+                    # 4. Struct Data als Fallback
+                    if hasattr(doc, 'struct_data') and len(results) == 0:
+                        struct_data = doc.struct_data
+                        if struct_data:
+                            app.logger.info(f"Using struct_data: {struct_data}")
+                            
+            except Exception as e:
+                app.logger.warning(f"Fehler beim Verarbeiten eines Suchergebnisses: {e}")
+                continue
+        
+        app.logger.info(f"Processed {result_count} results, extracted {len(results)} text chunks for {filename}")
+        
+        # Wenn keine Ergebnisse mit Filter, versuche ohne Filter als Fallback
+        if len(results) == 0:
+            app.logger.warning(f"No results with filter, trying without filter...")
+            try:
+                request_no_filter = SearchRequest(
+                    serving_config=serving_config,
+                    query=f"{filename} {query_text}",
+                    page_size=max_results,
+                )
+                response_no_filter = client.search(request=request_no_filter)
+                
+                for result in response_no_filter.results:
+                    if hasattr(result, 'document'):
+                        doc = result.document
+                        if hasattr(doc, 'derived_struct_data'):
+                            derived_data = doc.derived_struct_data
+                            if 'snippets' in derived_data:
+                                for snippet in derived_data['snippets']:
+                                    if 'snippet' in snippet:
+                                        results.append(snippet['snippet'])
+                
+                app.logger.info(f"Fallback search found {len(results)} results")
+            except Exception as e:
+                app.logger.error(f"Fallback search also failed: {e}")
+        
         return results
         
     except Exception as e:
         app.logger.error(f"Fehler bei der Dokumentensuche: {e}")
+        app.logger.error(f"Exception type: {type(e).__name__}")
+        import traceback
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
         return []
 
 def trigger_indexing(gcs_path):
@@ -394,19 +449,25 @@ def analyze_script():
         # Extrahiere den tatsächlichen Dateinamen für bessere Filterung
         actual_filename = file_name.split('/')[-1] if '/' in file_name else file_name
         
+        app.logger.info(f"Starting analysis for file: {actual_filename}")
+        app.logger.info(f"Topic: {main_topic}")
+        
         # Suche direkt nach Inhalten aus dem spezifischen Dokument
         search_query = f"Analysiere das Dokument über {main_topic}"
         document_chunks = search_document_content(actual_filename, search_query, max_results=20)
         
         if not document_chunks:
+            error_msg = f"Keine Inhalte für Datei '{actual_filename}' gefunden. Mögliche Ursachen: 1) Indexierung noch nicht abgeschlossen (5-30 Minuten nach Upload), 2) Dateiname stimmt nicht überein, 3) Dokument wurde nicht korrekt indexiert."
+            app.logger.error(error_msg)
             return jsonify({
-                "error": f"Keine Inhalte für Datei '{actual_filename}' gefunden. Möglicherweise ist die Indexierung noch nicht abgeschlossen (5-30 Minuten nach Upload)."
+                "error": error_msg
             }), 404
         
         # Kombiniere die gefundenen Chunks zu einem Kontext
         document_context = "\n\n".join(document_chunks[:15])  # Limitiere auf erste 15 Chunks
         
-        app.logger.info(f"Retrieved {len(document_chunks)} chunks, using first 15")
+        app.logger.info(f"Retrieved {len(document_chunks)} chunks, using first 15 for analysis")
+        app.logger.info(f"Context length: {len(document_context)} characters")
         
         # Erstelle Prompt mit dem tatsächlichen Dokumentinhalt
         user_prompt = f"""Du analysierst die Datei: "{actual_filename}"

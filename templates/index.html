@@ -620,6 +620,7 @@
             // Reset
             loadingDiv.style.display = 'none';
             resultsDiv.style.display = 'none';
+            resultsDiv.innerHTML = '';
             errorDiv.style.display = 'none';
             errorDiv.classList.remove('active');
 
@@ -627,6 +628,8 @@
             loadingDiv.style.display = 'block';
 
             try {
+                console.log('Analyzing file:', selectedFile);
+                
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: {
@@ -636,19 +639,35 @@
                 });
 
                 const data = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response data:', data);
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Analyse fehlgeschlagen');
                 }
 
+                // Check if we have analysis result
+                if (!data.analysis_result || data.analysis_result.trim() === '') {
+                    throw new Error('Keine Analyseergebnisse erhalten. Möglicherweise ist die Indexierung noch nicht abgeschlossen.');
+                }
+
                 // Display results
                 let html = convertMarkdownToHtml(data.analysis_result);
+                console.log('Generated HTML length:', html.length);
+                
                 resultsDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
 
+                // Show chunks found info if available
+                if (data.chunks_found !== undefined) {
+                    console.log('Chunks found:', data.chunks_found);
+                }
+
             } catch (error) {
+                console.error('Analysis error:', error);
                 errorDiv.textContent = `❌ Fehler: ${error.message}`;
                 errorDiv.classList.add('active');
+                errorDiv.style.display = 'block';
                 resultsDiv.style.display = 'none';
             } finally {
                 loadingDiv.style.display = 'none';
