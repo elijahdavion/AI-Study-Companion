@@ -37,10 +37,12 @@ echo "🚀 Starting deployment process..."
 # Konfiguration
 PROJECT_ID="ai-study-companion-480112"
 SERVICE_NAME="study-companion-agent"
-REGION="europe-west1"
+CLOUD_RUN_REGION="europe-west1"
+VERTEX_REGION="europe-west1"
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 SERVICE_ACCOUNT="study-companion-sa@$PROJECT_ID.iam.gserviceaccount.com"
-DATA_STORE_ID="projects/$PROJECT_ID/locations/eu/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355"
+DATA_STORE_ID="ai-study-companion-data-store_1765190826355"
+DATA_STORE_LOCATION="eu"
 
 # Schritt 1: Image bauen
 echo ""
