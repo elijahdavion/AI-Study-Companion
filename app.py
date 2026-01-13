@@ -18,7 +18,7 @@ import re
 # Configuration
 # ---------------------------
 
-PROJECT_ID = os.getenv("PROJECT_ID")
+PROJECT_ID = os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID")
 VERTEX_REGION = os.getenv("VERTEX_REGION") or os.getenv("REGION") or "europe-west1"
 
 DATA_STORE_ID = os.getenv("DATA_STORE_ID")  # should be datastore ID (recommended)
@@ -210,6 +210,8 @@ def upload_pdf():
         blob = bucket.blob(unique_filename)
         blob.upload_from_string(file_content, content_type="application/pdf")
 
+        gcs_uri = f"gs://{GCS_BUCKET_NAME}/{unique_filename}"
+
         # Die Indexierung erfolgt automatisch durch den Data Store.
         indexing_message = "Datei erfolgreich hochgeladen und wird automatisch indiziert. Die Analyse ist in wenigen Minuten verfügbar."
 
@@ -236,13 +238,13 @@ def generate_unique_filename(original_name: str, timestamp: str) -> str:
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
         base_filename = f"{timestamp}_{original_name}.pdf"
-        if not bucket.blob(base_filename).exists(client=storage_client):
+        if not bucket.blob(base_filename).exists():
             return base_filename
 
         counter = 1
         while True:
             new_filename = f"{timestamp}_{original_name}({counter}).pdf"
-            if not bucket.blob(new_filename).exists(client=storage_client):
+            if not bucket.blob(new_filename).exists():
                 return new_filename
             counter += 1
 
