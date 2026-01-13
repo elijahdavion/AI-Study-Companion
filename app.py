@@ -1,42 +1,99 @@
+# app.py
+
 import os
+from datetime import datetime
+
 from flask import Flask, request, jsonify, render_template
+
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, grounding
+
 from google.cloud import storage
 
 from datetime import datetime
 import re
 
-# --- Konfiguration ---
-PROJECT_ID = os.getenv("GCP_PROJECT_ID") 
-REGION = "europe-west1" 
-DATA_STORE_ID = os.getenv("DATA_STORE_ID")
-GCS_BUCKET_NAME = "ai-study-companion-bucket"
+
+# ---------------------------
+# Configuration
+# ---------------------------
+
+PROJECT_ID = os.getenv("PROJECT_ID")
+VERTEX_REGION = os.getenv("VERTEX_REGION") or os.getenv("REGION") or "europe-west1"
+
+DATA_STORE_ID = os.getenv("DATA_STORE_ID")  # should be datastore ID (recommended)
+DATA_STORE_LOCATION = os.getenv("DATA_STORE_LOCATION")  # e.g. "eu" or "global" or "us"
+
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME") or "ai-study-companion-bucket"
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
-# Initialisiere Vertex AI
-if PROJECT_ID:
-    vertexai.init(project=PROJECT_ID, location=REGION)
 
-# --- Tool Definition für Data Store ---
+def discoveryengine_api_endpoint(location: str) -> str:
+    """
+    Discovery Engine endpoints:
+      - global -> discoveryengine.googleapis.com
+      - eu/us/etc -> eu-discoveryengine.googleapis.com, us-discoveryengine.googleapis.com, ...
+    """
+    if not location:
+        raise ValueError("Missing DATA_STORE_LOCATION (expected e.g. 'eu' or 'global').")
+    if location == "global":
+        return "discoveryengine.googleapis.com"
+    return f"{location}-discoveryengine.googleapis.com"
+
+
+def datastore_resource_name(project_id: str, location: str, datastore_id_or_path: str) -> str:
+    """
+    Gemini grounding.VertexAISearch expects a datastore resource name.
+    If the env already contains a full resource path, keep it.
+    Otherwise build:
+    projects/{project}/locations/{location}/collections/default_collection/dataStores/{id}
+    """
+    if not datastore_id_or_path:
+        raise ValueError("Missing DATA_STORE_ID.")
+    if datastore_id_or_path.startswith("projects/"):
+        return datastore_id_or_path
+
+    return (
+        f"projects/{project_id}/locations/{location}/collections/default_collection/"
+        f"dataStores/{datastore_id_or_path}"
+    )
+
+
+def datastore_branch_parent(project_id: str, location: str, datastore_id_or_path: str) -> str:
+    """
+    Document operations need the branches/default_branch scope.
+    """
+    ds = datastore_resource_name(project_id, location, datastore_id_or_path)
+    return f"{ds}/branches/default_branch"
+
+
+# Initialize Vertex AI (for Gemini model calls)
+if PROJECT_ID:
+    vertexai.init(project=PROJECT_ID, location=VERTEX_REGION)
+
+app = Flask(__name__)
+
+# ---------------------------
+# Tool (Vertex AI Search grounding)
+# ---------------------------
 tools = []
-if PROJECT_ID and DATA_STORE_ID:
+if PROJECT_ID and DATA_STORE_ID and DATA_STORE_LOCATION:
     try:
-        # Definiere das Retrieval-Tool für Vertex AI Search
+        ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
         datastore_tool = Tool.from_retrieval(
             retrieval=grounding.Retrieval(
-                source=grounding.VertexAISearch(
-                    datastore=DATA_STORE_ID
-                )
+                source=grounding.VertexAISearch(datastore=ds_resource)
             )
         )
         tools = [datastore_tool]
     except Exception as e:
-        import logging
-        logging.error(f"Fehler beim Initialisieren des Data Store Tools: {e}")
+        app.logger.error(f"Fehler beim Initialisieren des Data Store Tools: {e}")
         tools = []
 
-# --- Spezifischer Prompt (System Instruction) ---
+
+# ---------------------------
+# System Prompt
+# ---------------------------
 SYSTEM_PROMPT = """
 Sie sind ein hochspezialisierter KI-Studienbegleiter mit STRIKTER Qualitätskontrolle. 
 
@@ -76,93 +133,78 @@ Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
 - Achten Sie auf korrekte Zeilenumbrüche zwischen allen Listenpunkten
 """
 
-app = Flask(__name__)
 
+# ---------------------------
+# Routes
+# ---------------------------
 @app.route("/")
 def home():
-    """
-    Startseite mit Web-Interface.
-    """
     return render_template("index.html")
+
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """
-    Health check endpoint für Cloud Run.
-    """
     return jsonify({"status": "healthy"}), 200
+
 
 @app.route("/list-files", methods=["GET"])
 def list_files():
-    """
-    Listet alle PDF-Dateien im GCS Bucket auf.
-    """
     try:
         if not PROJECT_ID:
-            return jsonify({"error": "Server misconfiguration: Missing GCP_PROJECT_ID"}), 500
+            return jsonify({"error": "Server misconfiguration: Missing PROJECT_ID"}), 500
 
         storage_client = storage.Client(project=PROJECT_ID)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
-        
-        blobs = bucket.list_blobs()
+
         files = []
-        
-        for blob in blobs:
-            if blob.name.lower().endswith('.pdf'):
-                files.append({
-                    "name": blob.name,
-                    "gs_path": f"gs://{GCS_BUCKET_NAME}/{blob.name}",
-                    "size": blob.size,
-                    "created": blob.time_created.isoformat() if blob.time_created else None
-                })
-        
-        # Sortiere nach neuesten zuerst
-        files.sort(key=lambda x: x['created'], reverse=True)
-        
+        for blob in bucket.list_blobs():
+            if blob.name.lower().endswith(".pdf"):
+                files.append(
+                    {
+                        "name": blob.name,
+                        "gs_path": f"gs://{GCS_BUCKET_NAME}/{blob.name}",
+                        "size": blob.size,
+                        "created": blob.time_created.isoformat() if blob.time_created else None,
+                    }
+                )
+
+        files.sort(key=lambda x: x["created"] or "", reverse=True)
         return jsonify({"files": files}), 200
 
     except Exception as e:
         app.logger.error(f"Fehler beim Auflisten der Dateien: {e}")
         return jsonify({"error": "Fehler beim Auflisten der Dateien", "details": str(e)}), 500
 
+
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
-    """
-    HTTP-Endpunkt zum Hochladen von PDF-Dateien zu GCS mit automatischer Indexierung.
-    """
     try:
-        if not PROJECT_ID or not DATA_STORE_ID:
-            return jsonify({"error": "Server misconfiguration: Missing GCP_PROJECT_ID or DATA_STORE_ID"}), 500
+        if not PROJECT_ID or not DATA_STORE_ID or not DATA_STORE_LOCATION:
+            return jsonify(
+                {"error": "Server misconfiguration: Missing PROJECT_ID, DATA_STORE_ID, or DATA_STORE_LOCATION"}
+            ), 500
 
-        # Überprüfe, ob eine Datei im Request vorhanden ist
         if "file" not in request.files:
             return jsonify({"error": "Keine Datei in der Anfrage gefunden."}), 400
 
         file = request.files["file"]
-
         if file.filename == "":
             return jsonify({"error": "Keine Datei ausgewählt."}), 400
 
-        # Validiere Dateityp
         if not file.filename.lower().endswith(".pdf"):
             return jsonify({"error": "Nur PDF-Dateien sind erlaubt."}), 400
 
         if file.content_type not in ["application/pdf", "application/octet-stream"]:
             return jsonify({"error": "Ungültiger Dateityp. Bitte laden Sie eine PDF-Datei hoch."}), 400
 
-        # Lese Datei in den Speicher
         file_content = file.read()
-
-        # Überprüfe Dateigröße
         if len(file_content) > MAX_FILE_SIZE:
-            return jsonify({"error": f"Datei zu groß. Maximum: 100 MB"}), 400
+            return jsonify({"error": "Datei zu groß. Maximum: 100 MB"}), 400
 
-        # Generiere eindeutigen Dateinamen mit Timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d")
-        original_name = file.filename.rsplit(".", 1)[0]  # Entferne .pdf
+        original_name = file.filename.rsplit(".", 1)[0]
         unique_filename = generate_unique_filename(original_name, timestamp)
 
-        # Lade Datei zu GCS hoch
         storage_client = storage.Client(project=PROJECT_ID)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
         blob = bucket.blob(unique_filename)
@@ -171,85 +213,70 @@ def upload_pdf():
         # Die Indexierung erfolgt automatisch durch den Data Store.
         indexing_message = "Datei erfolgreich hochgeladen und wird automatisch indiziert. Die Analyse ist in wenigen Minuten verfügbar."
 
-        return jsonify({
-            "success": True,
-            "filename": unique_filename,
-            "gcs_path": f"gs://{GCS_BUCKET_NAME}/{unique_filename}",
-            "message": indexing_message
-        }), 200
+        return jsonify(
+            {
+                "success": True,
+                "filename": unique_filename,
+                "gcs_path": gcs_uri,
+                "message": indexing_message,
+            }
+        ), 200
 
     except Exception as e:
         app.logger.error(f"Fehler beim Datei-Upload: {e}")
         return jsonify({"error": "Interner Serverfehler beim Upload", "details": str(e)}), 500
 
-def generate_unique_filename(original_name, timestamp):
+
+def generate_unique_filename(original_name: str, timestamp: str) -> str:
     """
-    Generiert einen eindeutigen Dateinamen mit Timestamp-Präfix.
-    Falls die Datei bereits existiert, wird ein Suffix hinzugefügt: (1), (2), etc.
+    DATE_original.pdf  (or DATE_original(1).pdf ...)
     """
     try:
         storage_client = storage.Client(project=PROJECT_ID)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
-        
+
         base_filename = f"{timestamp}_{original_name}.pdf"
-        
-        # Überprüfe, ob Datei bereits existiert
-        if not bucket.blob(base_filename).exists():
+        if not bucket.blob(base_filename).exists(client=storage_client):
             return base_filename
-        
-        # Falls existiert, füge Nummern hinzu
+
         counter = 1
         while True:
             new_filename = f"{timestamp}_{original_name}({counter}).pdf"
-            if not bucket.blob(new_filename).exists():
+            if not bucket.blob(new_filename).exists(client=storage_client):
                 return new_filename
             counter += 1
-            
+
     except Exception as e:
         app.logger.error(f"Fehler beim Generieren des Dateinamens: {e}")
-        # Fallback auf Timestamp allein
         return f"{timestamp}_{original_name}_{int(datetime.now().timestamp())}.pdf"
 
 
 
 @app.route("/analyze", methods=["POST"])
 def analyze_script():
-    """
-    HTTP-Endpunkt, der eine Datei analysiert und strukturierte Ergebnisse liefert.
-    """
     try:
-        if not PROJECT_ID or not DATA_STORE_ID:
-             return jsonify({"error": "Server misconfiguration: Missing GCP_PROJECT_ID or DATA_STORE_ID"}), 500
+        if not PROJECT_ID or not DATA_STORE_ID or not DATA_STORE_LOCATION:
+            return jsonify({"error": "Server misconfiguration: Missing PROJECT_ID / DATA_STORE_ID / DATA_STORE_LOCATION"}), 500
 
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         file_name = data.get("file_name")
 
         if not file_name:
             return jsonify({"error": "Fehlendes 'file_name' im JSON-Body."}), 400
-        
-        # Extrahiere den Dateinamen aus dem GCS-Pfad
-        # Z.B. "gs://bucket/2026-01-05_Kapitel3_SpeicherungundÜbertragung_202411_v2.7.pdf" 
-        # -> "Kapitel3_SpeicherungundÜbertragung"
-        display_name = file_name.split('/')[-1]  # Get filename from path
-        if display_name.endswith('.pdf'):
-            display_name = display_name[:-4]  # Remove .pdf extension
-        
-        # Extract the main topic from the filename
-        # E.g., "2026-01-05_Kapitel3_SpeicherungundÜbertragung_202411_v2.7.pdf"
-        # -> "Speicherung und Übertragung" or "Kapitel3"
-        topic_parts = display_name.split('_')
-        # Usually format is: DATE_CHAPTER_TOPIC_DATE_VERSION
+
+        display_name = file_name.split("/")[-1]
+        if display_name.lower().endswith(".pdf"):
+            display_name = display_name[:-4]
+
+        topic_parts = display_name.split("_")
         main_topic = ""
         for i, part in enumerate(topic_parts):
-            if part.startswith('Kapitel'):
-                if i + 1 < len(topic_parts):
-                    main_topic = topic_parts[i + 1]
+            if part.startswith("Kapitel") and i + 1 < len(topic_parts):
+                main_topic = topic_parts[i + 1]
                 break
-        
         if not main_topic:
             main_topic = display_name
-        
-        # Der Prompt muss das Modell anweisen, das Tool zu benutzen
+
         user_prompt = f"""Du analysierst AUSSCHLIESSLICH die Datei: {display_name}
 
 Die Datei behandelt das Thema: "{main_topic}"
@@ -257,64 +284,54 @@ Die Datei behandelt das Thema: "{main_topic}"
 WICHTIG - QUALITÄTSKONTROLLE:
 1. Nutze das Retrieval-Tool um Inhalte abzurufen
 2. ÜBERPRÜFE SOFORT: Behandeln die abgerufenen Inhalte das Thema "{main_topic}"?
-3. WENN NICHT (z.B. wenn sie von "Bildaufnahme", "Kamerasensoren" oder anderen Themen sprechen):
+3. WENN NICHT:
    → Lehne sofort ab und antworte: "Die Datei '{display_name}' konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
 4. WENN JA, fahre fort mit der vollständigen Analyse
 
-Deine Aufgabe ist die UMFASSENDE Analyse:
-1. Identifiziere ALLE Kapitel und Hauptthemen
-2. Gehe systematisch JEDES Kapitel durch
-3. Extrahiere die Kerninhalte
-4. Erstelle Zusammenfassung, Themenübersicht und Lernziele
+Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen.
+"""
 
-Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen."""
-
-        # Initialisiere das Modell mit den Tools
         model = GenerativeModel(
-            model_name='gemini-2.5-pro',
+            model_name="gemini-2.5-pro",
             system_instruction=SYSTEM_PROMPT,
-            tools=tools
+            tools=tools,
         )
 
-        # Generiere den Inhalt
         response = model.generate_content(user_prompt)
 
-        # Extrahiere den Text sicher (auch bei mehreren Parts)
         full_text = ""
         if response.candidates:
             for part in response.candidates[0].content.parts:
-                if part.text:
+                if getattr(part, "text", None):
                     full_text += part.text
 
-        # Extrahiere Quellen (falls vorhanden)
         used_sources = []
-        if response.candidates and response.candidates[0].grounding_metadata.grounding_chunks:
-            for chunk in response.candidates[0].grounding_metadata.grounding_chunks:
-                # Vertex AI Search liefert 'retrieved_context'
-                if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
-                    used_sources.append(chunk.retrieved_context.uri)
-                # Fallback für Web Search (falls jemals genutzt)
-                elif hasattr(chunk, "web") and chunk.web:
-                    used_sources.append(chunk.web.uri)
+        if response.candidates:
+            md = getattr(response.candidates[0], "grounding_metadata", None)
+            if md and getattr(md, "grounding_chunks", None):
+                for chunk in md.grounding_chunks:
+                    if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
+                        used_sources.append(chunk.retrieved_context.uri)
+                    elif hasattr(chunk, "web") and chunk.web:
+                        used_sources.append(chunk.web.uri)
 
-        return jsonify({
-            "analysis_result": full_text,
-            "used_sources": used_sources
-        }), 200
+        return jsonify({"analysis_result": full_text, "used_sources": used_sources}), 200
 
     except Exception as e:
         app.logger.error(f"Fehler bei der Analyse: {e}")
         return jsonify({"error": "Interner Serverfehler", "details": str(e)}), 500
 
+
 if __name__ == "__main__":
     import logging
+
     logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-    
-    logger.info(f"Starting AI Study Companion")
-    logger.info(f"GCP_PROJECT_ID: {PROJECT_ID}")
-    logger.info(f"DATA_STORE_ID configured: {bool(DATA_STORE_ID)}")
-    logger.info(f"Tools initialized: {len(tools) > 0}")
-    
+    app.logger.info("Starting AI Study Companion")
+    app.logger.info(f"PROJECT_ID: {PROJECT_ID}")
+    app.logger.info(f"VERTEX_REGION: {VERTEX_REGION}")
+    app.logger.info(f"DATA_STORE_ID configured: {bool(DATA_STORE_ID)}")
+    app.logger.info(f"DATA_STORE_LOCATION: {DATA_STORE_LOCATION}")
+    app.logger.info(f"Tools initialized: {len(tools) > 0}")
+
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
