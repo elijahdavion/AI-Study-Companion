@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, grounding
 from google.cloud import storage
-from google.cloud import discoveryengine_v1
+
 from datetime import datetime
 import re
 
@@ -168,13 +168,8 @@ def upload_pdf():
         blob = bucket.blob(unique_filename)
         blob.upload_from_string(file_content, content_type="application/pdf")
 
-        # Triggere automatische Indexierung
-        try:
-            trigger_indexing(unique_filename)
-            indexing_message = "Datei erfolgreich hochgeladen. Indexierung läuft... (5-30 Minuten)"
-        except Exception as e:
-            app.logger.warning(f"Indexierung konnte nicht triggert werden: {e}")
-            indexing_message = "Datei hochgeladen, aber Indexierung konnte nicht gestartet werden."
+        # Die Indexierung erfolgt automatisch durch den Data Store.
+        indexing_message = "Datei erfolgreich hochgeladen und wird automatisch indiziert. Die Analyse ist in wenigen Minuten verfügbar."
 
         return jsonify({
             "success": True,
@@ -215,39 +210,7 @@ def generate_unique_filename(original_name, timestamp):
         # Fallback auf Timestamp allein
         return f"{timestamp}_{original_name}_{int(datetime.now().timestamp())}.pdf"
 
-def trigger_indexing(gcs_path):
-    """
-    Triggert die automatische Indexierung für die hochgeladene Datei.
-    """
-    try:
-        client = discoveryengine_v1.DocumentServiceClient()
-        
-        # Extrahiere Data Store ID Komponenten
-        # Format: projects/{project}/locations/{location}/collections/default_collection/dataStores/{datastore_id}
-        parent = f"projects/{PROJECT_ID}/locations/{REGION}/collections/default_collection/dataStores/{DATA_STORE_ID.split('/')[-1]}"
-        
-        # Erstelle ein Dokument-Objekt
-        from google.cloud.discoveryengine_v1.types import Document
-        
-        document = Document(
-            id=gcs_path.replace("/", "-").replace(".", "-"),
-            structured_data={"title": gcs_path},
-            raw_document=discoveryengine_v1.RawDocument(
-                file_type_=discoveryengine_v1.RawDocument.FileType.PDF,
-                file_data=discoveryengine_v1.FileData(
-                    mime_type="application/pdf",
-                    gcs_uri=f"gs://{GCS_BUCKET_NAME}/{gcs_path}"
-                )
-            )
-        )
-        
-        # Erstelle oder update das Dokument im Data Store
-        operation = client.create_document(request={"parent": parent, "document": document})
-        app.logger.info(f"Indexierung gestartet für {gcs_path}: Operation {operation.name}")
-        
-    except Exception as e:
-        app.logger.error(f"Fehler beim Triggern der Indexierung: {e}")
-        raise
+
 
 @app.route("/analyze", methods=["POST"])
 def analyze_script():
