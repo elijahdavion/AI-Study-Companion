@@ -15,4 +15,4 @@ COPY templates/ ./templates/
 EXPOSE 8080
 
 # Starte Anwendung mit Gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 --log-level debug app:app

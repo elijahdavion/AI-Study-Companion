@@ -279,7 +279,7 @@ Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen.
 """
 
         model = GenerativeModel(
-            model_name="gemini-2.5-pro",
+            model_name="gemini-1.0-pro",
             system_instruction=SYSTEM_PROMPT,
             tools=tools,
         )
