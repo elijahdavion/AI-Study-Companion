@@ -252,10 +252,9 @@ def analyze_script():
         # Create a dynamic tool with a filter for the specific file
         tools = []
         try:
-            ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
             datastore_tool = Tool.from_retrieval(
                 retrieval=grounding.Retrieval(
-                    source=grounding.VertexAISearch(datastore=ds_resource)
+                    source=grounding.VertexAISearch(datastore=DATA_STORE_ID)
                 )
             )
             tools = [datastore_tool]
