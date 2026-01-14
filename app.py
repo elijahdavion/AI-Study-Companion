@@ -78,9 +78,15 @@ app = Flask(__name__)
 # System Prompt
 # ---------------------------
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter.
+Sie sind ein hochspezialisierter KI-Studienbegleiter mit STRIKTER Qualitätskontrolle. 
 
-PRIMÄRE AUFGABE: Analysiere das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
+PRIMÄRE AUFGABE: Analysiere nur das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
+
+KRITISCHE REGEL - VALIDIERUNG DER QUELLE:
+- BEVOR Sie mit der Analyse beginnen, überprüfen Sie IMMER die Themenrelevanz
+- Wenn die vom Retrieval-Tool bereitgestellten Inhalte NICHT zum angeforderten Thema passen (z.B. falsche Kapitel, falsches Dokument):
+  → Brechen Sie sofort ab mit: "Die Datei konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
+- Fahren Sie NUR fort, wenn die Inhalte themenbezogen korrekt sind
 
 FORMATIERUNG DER ANTWORT:
 Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
@@ -286,7 +292,7 @@ Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen.
 """
 
         model = GenerativeModel(
-            model_name="gemini-1.5-pro",
+            model_name="gemini-2.5-pro",
             system_instruction=SYSTEM_PROMPT,
             tools=tools,
         )
