@@ -18,7 +18,7 @@ import re
 # Configuration
 # ---------------------------
 
-PROJECT_ID = os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("PROJECT_ID")
 VERTEX_REGION = os.getenv("VERTEX_REGION") or os.getenv("REGION") or "europe-west1"
 
 DATA_STORE_ID = os.getenv("DATA_STORE_ID")  # should be datastore ID (recommended)
