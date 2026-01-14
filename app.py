@@ -18,7 +18,7 @@ import re
 # Configuration
 # ---------------------------
 
-PROJECT_ID = os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID")
+PROJECT_ID = os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
 VERTEX_REGION = os.getenv("VERTEX_REGION") or os.getenv("REGION") or "europe-west1"
 
 DATA_STORE_ID = os.getenv("DATA_STORE_ID")  # should be datastore ID (recommended)
@@ -78,15 +78,9 @@ app = Flask(__name__)
 # System Prompt
 # ---------------------------
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter mit STRIKTER Qualitätskontrolle. 
+Sie sind ein hochspezialisierter KI-Studienbegleiter.
 
-PRIMÄRE AUFGABE: Analysiere nur das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
-
-KRITISCHE REGEL - VALIDIERUNG DER QUELLE:
-- BEVOR Sie mit der Analyse beginnen, überprüfen Sie IMMER die Themenrelevanz
-- Wenn die vom Retrieval-Tool bereitgestellten Inhalte NICHT zum angeforderten Thema passen (z.B. falsche Kapitel, falsches Dokument):
-  → Brechen Sie sofort ab mit: "Die Datei konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
-- Fahren Sie NUR fort, wenn die Inhalte themenbezogen korrekt sind
+PRIMÄRE AUFGABE: Analysiere das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
 
 FORMATIERUNG DER ANTWORT:
 Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
@@ -252,9 +246,10 @@ def analyze_script():
         # Create a dynamic tool with a filter for the specific file
         tools = []
         try:
+            ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
             datastore_tool = Tool.from_retrieval(
                 retrieval=grounding.Retrieval(
-                    source=grounding.VertexAISearch(datastore=DATA_STORE_ID)
+                    source=grounding.VertexAISearch(datastore=ds_resource)
                 )
             )
             tools = [datastore_tool]
@@ -279,13 +274,6 @@ def analyze_script():
         user_prompt = f"""Du analysierst AUSSCHLIESSLICH die Datei: {display_name}
 
 Die Datei behandelt das Thema: "{main_topic}"
-
-WICHTIG - QUALITÄTSKONTROLLE:
-1. Nutze das Retrieval-Tool um Inhalte abzurufen
-2. ÜBERPRÜFE SOFORT: Behandeln die abgerufenen Inhalte das Thema "{main_topic}"?
-3. WENN NICHT:
-   → Lehne sofort ab und antworte: "Die Datei '{display_name}' konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
-4. WENN JA, fahre fort mit der vollständigen Analyse
 
 Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen.
 """
