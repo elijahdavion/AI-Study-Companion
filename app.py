@@ -212,15 +212,15 @@ def upload_pdf():
 
         gcs_uri = f"gs://{GCS_BUCKET_NAME}/{unique_filename}"
 
-        # Die Indexierung erfolgt automatisch durch den Data Store.
-        indexing_message = "Datei erfolgreich hochgeladen und wird automatisch indiziert. Die Analyse ist in wenigen Minuten verfügbar."
+        # Die Datei wird automatisch vom Data Store verarbeitet.
+        message = "Datei erfolgreich hochgeladen."
 
         return jsonify(
             {
                 "success": True,
                 "filename": unique_filename,
                 "gcs_path": gcs_uri,
-                "message": indexing_message,
+                "message": message,
             }
         ), 200
 
