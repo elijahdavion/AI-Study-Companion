@@ -73,23 +73,6 @@ if PROJECT_ID:
 
 app = Flask(__name__)
 
-# ---------------------------
-# Tool (Vertex AI Search grounding)
-# ---------------------------
-tools = []
-if PROJECT_ID and DATA_STORE_ID and DATA_STORE_LOCATION:
-    try:
-        ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
-        datastore_tool = Tool.from_retrieval(
-            retrieval=grounding.Retrieval(
-                source=grounding.VertexAISearch(datastore=ds_resource)
-            )
-        )
-        tools = [datastore_tool]
-    except Exception as e:
-        app.logger.error(f"Fehler beim Initialisieren des Data Store Tools: {e}")
-        tools = []
-
 
 # ---------------------------
 # System Prompt
@@ -266,6 +249,31 @@ def analyze_script():
         if not file_name:
             return jsonify({"error": "Fehlendes 'file_name' im JSON-Body."}), 400
 
+        # Create a dynamic tool with a filter for the specific file
+        tools = []
+        try:
+            gcs_uri = f"gs://{GCS_BUCKET_NAME}/{file_name}"
+            filter_condition = f'uri="{gcs_uri}"'
+            
+            ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
+            
+            vertex_ai_search_source = grounding.VertexAISearch(
+                datastore=ds_resource,
+                filter=filter_condition,
+            )
+            
+            retrieval = grounding.Retrieval(
+                source=vertex_ai_search_source,
+                disable_attribution=False
+            )
+
+            datastore_tool = Tool.from_retrieval(retrieval)
+            tools = [datastore_tool]
+            app.logger.info(f"Tool created for URI: {gcs_uri}")
+        except Exception as e:
+            app.logger.error(f"Fehler beim Erstellen des dynamischen Tools: {e}")
+            return jsonify({"error": "Fehler beim Vorbereiten der Analyse-Tools.", "details": str(e)}), 500
+
         display_name = file_name.split("/")[-1]
         if display_name.lower().endswith(".pdf"):
             display_name = display_name[:-4]
@@ -294,7 +302,7 @@ Die Analyse muss sich AUSSCHLIESSLICH auf das Thema "{main_topic}" beziehen.
 """
 
         model = GenerativeModel(
-            model_name="gemini-2.5-pro",
+            model_name="gemini-1.5-pro",
             system_instruction=SYSTEM_PROMPT,
             tools=tools,
         )
@@ -333,7 +341,6 @@ if __name__ == "__main__":
     app.logger.info(f"VERTEX_REGION: {VERTEX_REGION}")
     app.logger.info(f"DATA_STORE_ID configured: {bool(DATA_STORE_ID)}")
     app.logger.info(f"DATA_STORE_LOCATION: {DATA_STORE_LOCATION}")
-    app.logger.info(f"Tools initialized: {len(tools) > 0}")
 
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
