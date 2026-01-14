@@ -78,15 +78,9 @@ app = Flask(__name__)
 # System Prompt
 # ---------------------------
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter mit STRIKTER Qualitätskontrolle. 
+Sie sind ein hochspezialisierter KI-Studienbegleiter.
 
-PRIMÄRE AUFGABE: Analysiere nur das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
-
-KRITISCHE REGEL - VALIDIERUNG DER QUELLE:
-- BEVOR Sie mit der Analyse beginnen, überprüfen Sie IMMER die Themenrelevanz
-- Wenn die vom Retrieval-Tool bereitgestellten Inhalte NICHT zum angeforderten Thema passen (z.B. falsche Kapitel, falsches Dokument):
-  → Brechen Sie sofort ab mit: "Die Datei konnte nicht analysiert werden, da das Retrieval-System die falschen Inhalte liefert."
-- Fahren Sie NUR fort, wenn die Inhalte themenbezogen korrekt sind
+PRIMÄRE AUFGABE: Analysiere das angeforderte Dokument und erstelle eine strukturierte Markdown-Antwort.
 
 FORMATIERUNG DER ANTWORT:
 Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
@@ -252,24 +246,14 @@ def analyze_script():
         # Create a dynamic tool with a filter for the specific file
         tools = []
         try:
-            gcs_uri = f"gs://{GCS_BUCKET_NAME}/{file_name}"
-            filter_condition = f'uri="{gcs_uri}"'
-            
             ds_resource = datastore_resource_name(PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID)
-            
-            vertex_ai_search_source = grounding.VertexAISearch(
-                datastore=ds_resource,
-                filter=filter_condition,
+            datastore_tool = Tool.from_retrieval(
+                retrieval=grounding.Retrieval(
+                    source=grounding.VertexAISearch(datastore=ds_resource)
+                )
             )
-            
-            retrieval = grounding.Retrieval(
-                source=vertex_ai_search_source,
-                disable_attribution=False
-            )
-
-            datastore_tool = Tool.from_retrieval(retrieval)
             tools = [datastore_tool]
-            app.logger.info(f"Tool created for URI: {gcs_uri}")
+            app.logger.info(f"Tool created for file: {file_name}")
         except Exception as e:
             app.logger.error(f"Fehler beim Erstellen des dynamischen Tools: {e}")
             return jsonify({"error": "Fehler beim Vorbereiten der Analyse-Tools.", "details": str(e)}), 500
