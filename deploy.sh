@@ -63,7 +63,7 @@ gcloud run deploy $SERVICE_NAME \
   --platform managed \
   --region $REGION \
   --service-account $SERVICE_ACCOUNT \
-  --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID,DATA_STORE_ID=$DATA_STORE_ID,DATA_STORE_LOCATION=$DATA_STORE_LOCATION" \
+  --set-env-vars "PROJECT_ID=$PROJECT_ID,GCS_BUCKET_NAME=ai-study-companion-bucket,DATA_STORE_ID=$DATA_STORE_ID,DATA_STORE_LOCATION=$DATA_STORE_LOCATION" \
   --allow-unauthenticated \
   --memory 1Gi \
   --cpu 1 \
