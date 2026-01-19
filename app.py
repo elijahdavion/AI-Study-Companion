@@ -55,21 +55,33 @@ else:
 
 # --- System Prompt ---
 SYSTEM_PROMPT = """
-Sie sind ein hochspezialisierter KI-Studienbegleiter. Ihre Aufgabe ist es, die **vom Data Store Tool bereitgestellten Informationen** zu analysieren und eine strukturierte Markdown-Antwort zu generieren.
+Sie sind ein hochspezialisierter KI-Studienbegleiter. Ihre Aufgabe ist es, die vom Data Store Tool bereitgestellten Informationen zu analysieren und eine strukturierte Markdown-Antwort zu generieren.
 
-**WICHTIG:** Das Data Store Tool hat die notwendigen Dokument-Auszüge bereits abgerufen. Sie müssen sich **NICHT** für einen fehlenden Zugriff auf GCS oder lokale Dateien entschuldigen, sondern müssen die abgerufenen Inhalte direkt für die Generierung nutzen.
+**ABSOLUTE FORMATIERUNGSREGELN:**
 
-Die Antwort muss exakt DREI spezifische Abschnitte enthalten:
+1.  **STRUKTUR:** Die Antwort MUSS exakt die folgenden DREI Abschnitte in dieser Reihenfolge enthalten: `## Zusammenfassung`, `## Thematische Übersicht`, `## Lernziele`.
+2.  **ÜBERSCHRIFTEN:** JEDER der drei Abschnitte MUSS mit einer Markdown-Überschrift der Ebene 2 (`##`) beginnen. Es darf keine andere Art von Überschrift (z.B. `###` oder `**fett**`) verwendet werden.
+3.  **ABSTÄNDE:** Zwischen einer Überschrift und dem darauffolgenden Text MUSS genau eine Leerzeile sein.
+4.  **EINLEITUNGSSÄTZE:** Beginnen Sie die Antwort IMMER direkt mit `## Zusammenfassung`. Schreiben Sie KEINE einleitenden Sätze oder Vorworte wie "Gerne...".
+5.  **LISTEN:**
+    *   Verwenden Sie für ALLE Listen, insbesondere bei der "Thematische Übersicht" und den "Lernzielen", AUSSCHLIESSLICH Aufzählungszeichen mit einem Bindestrich (`-`).
+    *   Verwenden Sie KEINE nummerierten Listen (z.B. `1.`, `2.`).
+    *   Unterpunkte werden mit zwei Leerzeichen eingerückt (`  -`).
 
-1.  **Zusammenfassung:** Eine prägnante, aber vollständige Zusammenfassung der wichtigsten Konzepte und Argumente.
-2.  **Thematische Übersicht:** Eine hierarchische (nummerierte oder verschachtelte) Gliederung der im Skript behandelten Hauptthemen und Unterpunkte.
-3.  **Lernziele:** Eine Liste von mindestens fünf spezifischen, messbaren Lernzielen (SMART-Prinzip) in Form von Aktionsverben ("Der Studierende kann...", "Definieren Sie...", "Analysieren Sie...").
+**BEISPIEL FÜR KORREKTE FORMATIERUNG:**
 
-Die Antwort MUSS ausschließlich im Markdown-Format erfolgen.
+## Zusammenfassung
+Dies ist eine prägnante Zusammenfassung des Inhalts.
 
-Bitte lasse Voworte raus wie: Gerne fasse ich die wichtigsten Inhalte des vorliegenden Skripts zusammen. Die bereitgestellten Informationen behandeln grundlegende Aspekte der Bildaufnahme und Videosignalübertragung.
+## Thematische Übersicht
+- Hauptpunkt eins
+  - Unterpunkt 1.1
+  - Unterpunkt 1.2
+- Hauptpunkt zwei
 
-Gebe nur oben genannten 3 Punkte an.
+## Lernziele
+- Der Studierende kann Konzept A definieren.
+- Der Studierende kann Prozess B analysieren.
 """
 
 # --- Routes ---
@@ -192,9 +204,57 @@ def analyze_script():
         app.logger.error(f"Error during analysis for {file_name}: {e}")
         return jsonify({"error": "Internal server error during analysis.", "details": str(e)}), 500
 
+
+# --- Imports for Document Status Check ---
+from google.cloud import discoveryengine_v1 as discoveryengine
+from google.api_core import exceptions
+import base64
+
+@app.route("/check_file_status", methods=['POST'])
+def check_file_status():
+    """Checks if a document has been indexed in the data store."""
+    data = request.get_json()
+    gcs_uri = data.get("gcs_uri")
+
+    if not all([gcs_uri, PROJECT_ID, DATA_STORE_LOCATION, DATA_STORE_ID]):
+        return jsonify({"error": "Server misconfiguration, missing environment variables."}), 500
+
+    try:
+        # For unstructured data, the document ID is the base64-encoded GCS URI.
+        document_id = base64.urlsafe_b64encode(gcs_uri.encode("utf-8")).decode("utf-8")
+        
+        # The branch ID is '0' for the default branch.
+        branch_id = "0"
+        
+        # Get the actual data store ID if the full resource name was provided
+        final_datastore_id = DATA_STORE_ID.split('/')[-1]
+
+        client = discoveryengine.DocumentServiceClient()
+        document_name = client.document_path(
+            project=PROJECT_ID,
+            location=DATA_STORE_LOCATION,
+            data_store=final_datastore_id,
+            branch=branch_id,
+            document=document_id,
+        )
+
+        app.logger.info(f"Checking for document: {document_name}")
+        client.get_document(name=document_name)
+        
+        app.logger.info(f"Document '{gcs_uri}' found in index.")
+        return jsonify({"status": "INDEXED"}), 200
+
+    except exceptions.NotFound:
+        app.logger.info(f"Document '{gcs_uri}' not found in index yet.")
+        return jsonify({"status": "PROCESSING"}), 202
+    except Exception as e:
+        app.logger.error(f"Error checking document status for '{gcs_uri}': {e}")
+        return jsonify({"status": "FAILED", "details": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.logger.info("Starting AI Study Companion...")
-    app.logger.info(f"Project ID: {GCP_PROJECT_ID}")
+    app.logger.info(f"Project ID: {PROJECT_ID}")
     app.logger.info(f"Region: {GCP_REGION}")
     app.logger.info(f"Data Store ID configured: {bool(DATA_STORE_ID)}")
     app.logger.info(f"GCS Bucket Name configured: {bool(GCS_BUCKET_NAME)}")
