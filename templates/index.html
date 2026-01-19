@@ -1,718 +1,279 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Study Companion</title>
-    <!-- Marked.js for Markdown to HTML conversion -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --text-color: #333;
+            --background-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            --border-radius: 12px;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background-gradient);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
-
         .container {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 900px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px 40px;
+            max-width: 800px;
             width: 100%;
-            animation: fadeIn 0.6s ease-out;
-            min-height: 400px;
+            animation: fadeIn 0.5s ease-out;
             display: flex;
             flex-direction: column;
         }
-
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin: 0;
-        }
-
-        .screen {
-            display: none;
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        .screen.active {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-
-        .home-screen {
-            gap: 25px;
-        }
-
-        .subtitle {
-            color: #666;
-            font-size: 1.1em;
-            text-align: center;
-        }
-
-        .input-group {
-            margin-bottom: 25px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="text"],
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: var(--primary-color); font-size: 2.2em; cursor: pointer; }
+        .screen { display: none; animation: fadeIn 0.4s ease-out; }
+        .screen.active { display: flex; flex-direction: column; gap: 20px; }
+        .input-group, .upload-section { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; color: var(--text-color); font-weight: 600; }
+        select, button { width: 100%; padding: 12px; border-radius: 8px; font-size: 1em; }
         select {
-            width: 100%;
-            padding: 15px;
             border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: all 0.3s ease;
-            font-family: inherit;
+            transition: border-color 0.3s;
         }
-
-        input[type="text"]:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polypolyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 20px;
-            padding-right: 40px;
-        }
-
+        select:focus { outline: none; border-color: var(--primary-color); }
         button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--background-gradient);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         .upload-section {
-            padding: 25px;
+            padding: 20px;
             background: #f0f4ff;
-            border-radius: 15px;
-            border: 2px dashed #667eea;
+            border-radius: var(--border-radius);
+            border: 2px dashed var(--primary-color);
+            text-align: center;
         }
-
-        .upload-section h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            margin-bottom: 15px;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
+        input[type="file"] { display: none; }
         .file-input-label {
-            display: block;
-            padding: 15px;
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
             cursor: pointer;
-            text-align: center;
-            transition: all 0.3s ease;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .file-input-label:hover {
-            border-color: #667eea;
-            background: #f8faff;
-            color: #667eea;
-        }
-
-        .file-name-display {
-            color: #667eea;
-            font-weight: 600;
-            margin-top: 10px;
-            font-size: 0.95em;
-        }
-
-        .upload-progress {
-            display: none;
-            margin-top: 15px;
             padding: 15px;
+            display: block;
+            border-radius: 8px;
             background: white;
-            border-radius: 10px;
+            border: 1px solid #ddd;
+            color: #555;
+            transition: background 0.2s;
         }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .upload-status {
-            font-size: 0.9em;
-            color: #333;
-            text-align: center;
-        }
-
-        .upload-status.success {
-            color: #0a7c2e;
-            font-weight: 600;
-        }
-
-        .upload-status.error {
-            color: #c33;
-            font-weight: 600;
-        }
-
-        .loading {
+        .file-input-label:hover { background: #fafcff; }
+        #fileNameDisplay { color: var(--primary-color); font-weight: 600; margin: 10px 0; font-size: 0.95em; }
+        .status-message {
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-weight: 500;
             display: none;
-            text-align: center;
-            padding: 40px;
         }
-
+        .status-message.success { background: #e6f9f0; color: #0a7c2e; display: block; }
+        .status-message.error { background: #fee; color: #c33; display: block; }
+        .loading { text-align: center; padding: 40px; }
         .spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid var(--primary-color);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 15px;
         }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .results {
-            display: none;
-            padding: 25px;
+            padding: 20px;
             background: #f8f9fa;
-            border-radius: 15px;
-            border-left: 5px solid #667eea;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--primary-color);
             overflow-y: auto;
-            max-height: 70vh;
+            max-height: 60vh;
+            line-height: 1.7;
         }
-
-        .results.active {
-            display: block;
-        }
-
-        .results h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.5em;
-        }
-
-        .results h3 {
-            color: #764ba2;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        .results ul,
-        .results ol {
-            margin-left: 20px;
-            line-height: 1.8;
-        }
-
-        .results p {
-            line-height: 1.8;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .error {
-            display: none;
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            border-left: 5px solid #c33;
-        }
-
-        .error.active {
-            display: block;
-        }
-
-        .analysis-screen {
-            gap: 20px;
-        }
-
-        .analysis-content-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            flex: 1;
-        }
-
-        .back-button {
-            padding: 10px 20px;
-            background: #f0f4ff;
-            color: #667eea;
-            border: 2px solid #667eea;
-            font-size: 1em;
-            width: auto;
-            align-self: flex-start;
-        }
-
-        .back-button:hover {
-            background: #667eea;
-            color: white;
-        }
-
-
-        .container {
-            padding: 25px;
-        }
-
-        .header h1 {
-            font-size: 2em;
-        }
+        .results h2, .results h3 { color: var(--primary-color); margin: 15px 0 10px; }
+        .back-button { width: auto; align-self: flex-start; background: #eef; color: var(--primary-color); border: 2px solid var(--primary-color); }
     </style>
 </head>
-
 <body>
     <div class="container">
-        <!-- Header with Title as Navigation -->
         <div class="header">
-            <h1 id="appTitle" onclick="goHome()" title="Zur Startseite">🎓 AI Study Companion</h1>
+            <h1 id="appTitle" onclick="goHome()">🎓 AI Study Companion</h1>
         </div>
 
         <!-- Home Screen -->
-        <div class="screen active home-screen" id="homeScreen">
-            <p class="subtitle">Analysiere deine Studienskripte intelligent mit KI</p>
-
-            <!-- Upload Section -->
+        <div class="screen active" id="homeScreen">
             <div class="upload-section">
-                <h3>📤 PDF hochladen</h3>
-                <div class="file-input-wrapper">
-                    <label for="pdfFile" class="file-input-label">
-                        <span id="fileLabel">📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)</span>
-                    </label>
-                    <input type="file" id="pdfFile" accept=".pdf" />
-                    <div class="file-name-display" id="fileNameDisplay"></div>
-                </div>
-                <button id="uploadBtn" class="upload-button" onclick="uploadPdf()">
-                    🚀 PDF hochladen
-                </button>
-                <div class="upload-progress" id="uploadProgress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="upload-status" id="uploadStatus"></div>
-                </div>
+                <label for="pdfUpload" class="file-input-label">📁 PDF zum Hochladen auswählen</label>
+                <input type="file" id="pdfUpload" accept=".pdf">
+                <div id="fileNameDisplay"></div>
+                <button id="uploadBtn" onclick="uploadFile()">🚀 Hochladen</button>
             </div>
 
-            <!-- Files Dropdown Section -->
             <div class="input-group">
-                <label for="fileDropdown">📁 Dateien aus deinem Google Cloud Storage Bucket:</label>
-                <select id="fileDropdown" onchange="selectFileFromDropdown()">
-                    <option value="">-- Datei auswählen --</option>
+                <label for="fileDropdown">Oder eine vorhandene Datei analysieren:</label>
+                <select id="fileDropdown">
+                    <option value="">-- Bitte Datei wählen --</option>
                 </select>
             </div>
 
-            <button id="analyzeBtn" onclick="analyzeDocument()">
-                📊 Skript analysieren
-            </button>
-
-            <div class="error" id="homeError"></div>
+            <button id="analyzeBtn" onclick="analyzeSelectedFile()">📊 Skript analysieren</button>
+            <div id="homeStatus" class="status-message"></div>
         </div>
 
         <!-- Analysis Screen -->
-        <div class="screen analysis-screen" id="analysisScreen">
-            <button class="back-button" onclick="goHome()">← Zurück zur Startseite</button>
-
-            <div class="loading" id="loading">
+        <div class="screen" id="analysisScreen">
+            <button class="back-button" onclick="goHome()">← Zurück</button>
+            <div id="analysisStatus" class="status-message"></div>
+            <div class="loading" id="loadingSpinner">
                 <div class="spinner"></div>
-                <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
-                    Analysiere Dokument... Dies kann bis zu 30 Sekunden dauern.
-                </p>
+                <p>Analysiere Dokument... Dies kann einen Moment dauern.</p>
             </div>
-
-            <div class="error active" id="analysisError"></div>
-
-            <div class="analysis-content-wrapper">
-                <div class="results active" id="results"></div>
-            </div>
+            <div class="results" id="resultsContainer"></div>
         </div>
     </div>
 
-    <script>
-        // Global variable to track selected file
-        let selectedFile = null;
+<script>
+    const homeScreen = document.getElementById('homeScreen');
+    const analysisScreen = document.getElementById('analysisScreen');
+    const pdfUpload = document.getElementById('pdfUpload');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const fileDropdown = document.getElementById('fileDropdown');
+    const homeStatus = document.getElementById('homeStatus');
+    const analysisStatus = document.getElementById('analysisStatus');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
 
-        // Initialize files list on page load
-        window.addEventListener('load', () => {
-            loadFilesList();
-        });
+    document.addEventListener('DOMContentLoaded', loadFiles);
 
-        // File upload handling
-        const pdfFileInput = document.getElementById('pdfFile');
-        const fileLabel = document.getElementById('fileLabel');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const uploadBtn = document.getElementById('uploadBtn');
+    pdfUpload.addEventListener('change', () => {
+        fileNameDisplay.textContent = pdfUpload.files.length > 0 ? `Ausgewählt: ${pdfUpload.files[0].name}` : '';
+    });
 
-        // Handle file selection
-        pdfFileInput.addEventListener('change', function () {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                fileNameDisplay.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
-                fileLabel.textContent = '✓ Datei ausgewählt';
-            }
-        });
+    function showStatus(element, message, isError = false) {
+        element.textContent = message;
+        element.className = `status-message ${isError ? 'error' : 'success'}`;
+    }
 
-        // Handle drag and drop
-        const uploadSection = document.querySelector('.upload-section');
+    function switchScreen(screen) {
+        homeScreen.classList.remove('active');
+        analysisScreen.classList.remove('active');
+        document.getElementById(screen).classList.add('active');
+    }
 
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.style.background = '#e8f4ff';
-            uploadSection.style.borderColor = '#764ba2';
-        });
+    function goHome() {
+        switchScreen('homeScreen');
+        homeStatus.style.display = 'none';
+        analysisStatus.style.display = 'none';
+    }
 
-        uploadSection.addEventListener('dragleave', () => {
-            uploadSection.style.background = '#f0f4ff';
-            uploadSection.style.borderColor = '#667eea';
-        });
-
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.style.background = '#f0f4ff';
-            uploadSection.style.borderColor = '#667eea';
-
-            const files = e.dataTransfer.files;
-            if (files && files[0]) {
-                pdfFileInput.files = files;
-                const event = new Event('change', { bubbles: true });
-                pdfFileInput.dispatchEvent(event);
-            }
-        });
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        async function loadFilesList() {
-            try {
-                const response = await fetch('/list-files');
-                const data = await response.json();
-
-                if (response.ok && data.files) {
-                    const dropdown = document.getElementById('fileDropdown');
-
-                    // Clear existing options (except the first one)
-                    dropdown.innerHTML = '<option value="">-- Datei auswählen --</option>';
-
-                    if (data.files.length > 0) {
-                        data.files.forEach(file => {
-                            const fileName = file.name.split('/').pop();
-                            dropdown.innerHTML += `<option value="${file.gs_path}">${fileName}</option>`;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Fehler beim Laden der Dateien:', error);
-            }
-        }
-
-        function selectFileFromDropdown() {
-            const dropdown = document.getElementById('fileDropdown');
-            selectedFile = dropdown.value;
-        }
-
-        async function uploadPdf() {
-            const file = pdfFileInput.files[0];
-            const uploadProgress = document.getElementById('uploadProgress');
-            const progressFill = document.getElementById('progressFill');
-            const uploadStatus = document.getElementById('uploadStatus');
-            const errorDiv = document.getElementById('homeError');
-
-            // Reset
-            uploadProgress.style.display = 'none';
-            errorDiv.style.display = 'none';
-
-            if (!file) {
-                errorDiv.textContent = '❌ Bitte wählen Sie eine PDF-Datei aus.';
-                errorDiv.classList.add('active');
-                return;
-            }
-
-            // Validate file type
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-                errorDiv.textContent = '❌ Bitte laden Sie nur PDF-Dateien hoch.';
-                errorDiv.classList.add('active');
-                return;
-            }
-
-            // Validate file size (100 MB)
-            const maxSize = 100 * 1024 * 1024;
-            if (file.size > maxSize) {
-                errorDiv.textContent = `❌ Datei zu groß! Maximum: 100 MB (Ihre Datei: ${formatFileSize(file.size)})`;
-                errorDiv.classList.add('active');
-                return;
-            }
-
-            // Show progress
-            uploadProgress.style.display = 'block';
-            uploadStatus.textContent = 'Hochladen läuft...';
-            uploadStatus.className = 'upload-status';
-            uploadBtn.disabled = true;
-            progressFill.style.width = '0%';
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const xhr = new XMLHttpRequest();
-
-                // Track upload progress
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 100;
-                        progressFill.style.width = percentComplete + '%';
-                    }
-                });
-
-                xhr.addEventListener('load', function () {
-                    if (xhr.status === 200) {
-                        const response = JSON.parse(xhr.responseText);
-
-                        progressFill.style.width = '100%';
-                        uploadStatus.textContent = `✓ ${response.filename}`;
-                        uploadStatus.className = 'upload-status success';
-
-                        // Select the uploaded file
-                        selectedFile = response.gcs_path;
-
-                        // Reload files list
-                        setTimeout(() => {
-                            loadFilesList();
-                            pdfFileInput.value = '';
-                            fileNameDisplay.textContent = '';
-                            fileLabel.textContent = '📁 Klicke hier oder ziehe eine PDF-Datei hierher (max. 100 MB)';
-                            uploadProgress.style.display = 'none';
-                        }, 1500);
-                    } else {
-                        const response = JSON.parse(xhr.responseText);
-                        throw new Error(response.error || 'Upload fehlgeschlagen');
-                    }
-                });
-
-                xhr.addEventListener('error', function () {
-                    throw new Error('Netzwerkfehler beim Upload');
-                });
-
-                xhr.open('POST', '/upload', true);
-                xhr.send(formData);
-
-            } catch (error) {
-                uploadStatus.textContent = `✗ Fehler: ${error.message}`;
-                uploadStatus.className = 'upload-status error';
-                errorDiv.textContent = `❌ ${error.message}`;
-                errorDiv.classList.add('active');
-            } finally {
-                uploadBtn.disabled = false;
-            }
-        }
-
-        async function analyzeDocument() {
-            if (!selectedFile) {
-                const errorDiv = document.getElementById('homeError');
-                errorDiv.textContent = '❌ Bitte wählen Sie eine Datei aus.';
-                errorDiv.classList.add('active');
-                return;
-            }
-
-            // Switch to analysis screen
-            switchScreen('analysisScreen');
-
-            const loadingDiv = document.getElementById('loading');
-            const resultsDiv = document.getElementById('results');
-            const errorDiv = document.getElementById('analysisError');
-
-            // Reset
-            loadingDiv.style.display = 'none';
-            resultsDiv.style.display = 'none';
-            resultsDiv.innerHTML = '';
-            errorDiv.style.display = 'none';
-            errorDiv.classList.remove('active');
-
-            // Show loading
-            loadingDiv.style.display = 'block';
-
-            try {
-                console.log('Analyzing file:', selectedFile);
-
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ file_name: selectedFile })
-                });
-
-                const data = await response.json();
-                console.log('Response status:', response.status);
-                console.log('Response data:', data);
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Analyse fehlgeschlagen');
-                }
-
-                // Check if we have analysis result
-                if (!data.analysis_result || data.analysis_result.trim() === '') {
-                    throw new Error('Keine Analyseergebnisse erhalten. Möglicherweise ist die Indexierung noch nicht abgeschlossen.');
-                }
-
-                // Display results
-                let html = convertMarkdownToHtml(data.analysis_result);
-                console.log('Generated HTML length:', html.length);
-
-                resultsDiv.innerHTML = html;
-                resultsDiv.style.display = 'block';
-
-                // Show chunks found info if available
-                if (data.chunks_found !== undefined) {
-                    console.log('Chunks found:', data.chunks_found);
-                }
-
-            } catch (error) {
-                console.error('Analysis error:', error);
-
-                // Show error message
-                let errorMessage = `❌ Fehler: ${error.message}`;
-
-                // Add indexing info if available in response
-                if (error.message.includes('indexiert')) {
-                    errorMessage += '\n\n⏳ Hinweis: Nach dem Upload benötigt Discovery Engine 5-30 Minuten zur Indexierung. Bitte warten Sie und versuchen Sie es später erneut.';
-                }
-
-                errorDiv.innerHTML = errorMessage.replace(/\n/g, '<br>');
-                errorDiv.classList.add('active');
-                errorDiv.style.display = 'block';
-                resultsDiv.style.display = 'none';
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        function switchScreen(screenId) {
-            const screens = document.querySelectorAll('.screen');
-            screens.forEach(screen => screen.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-        }
-
-        function goHome() {
-            switchScreen('homeScreen');
-            const errorDiv = document.getElementById('homeError');
-            errorDiv.classList.remove('active');
-        }
-
-        // Markdown to HTML converter using marked.js
-        function convertMarkdownToHtml(markdown) {
-            // Remove markdown code block wrappers if present
-            let cleaned = markdown.trim();
-
-            // Remove ```markdown at the start and ``` at the end
-            if (cleaned.startsWith('```markdown') || cleaned.startsWith('```')) {
-                cleaned = cleaned.replace(/^```(?:markdown)?\s*\n/i, '');
-                cleaned = cleaned.replace(/\n```\s*$/i, '');
-            }
-
-            // Configure marked for better rendering
-            marked.setOptions({
-                breaks: true,
-                gfm: true
+    async function loadFiles() {
+        try {
+            const response = await fetch('/files');
+            if (!response.ok) throw new Error('Dateiliste konnte nicht geladen werden.');
+            
+            const { files } = await response.json();
+            fileDropdown.innerHTML = '<option value="">-- Bitte Datei wählen --</option>';
+            files.forEach(file => {
+                const option = new Option(file.name, file.path);
+                fileDropdown.add(option);
             });
-            return marked.parse(cleaned);
+        } catch (error) {
+            showStatus(homeStatus, error.message, true);
         }
-    </script>
-</body>
+    }
 
+    async function uploadFile() {
+        if (pdfUpload.files.length === 0) {
+            showStatus(homeStatus, 'Bitte wählen Sie eine Datei aus.', true);
+            return;
+        }
+        const file = pdfUpload.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Lade hoch...';
+        
+        try {
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.details || 'Upload fehlgeschlagen.');
+            
+            showStatus(homeStatus, result.message, false);
+            pdfUpload.value = '';
+            fileNameDisplay.textContent = '';
+            await loadFiles();
+            fileDropdown.value = result.path; // Select the newly uploaded file
+        } catch (error) {
+            showStatus(homeStatus, error.message, true);
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '🚀 Hochladen';
+        }
+    }
+
+    async function analyzeSelectedFile() {
+        const selectedPath = fileDropdown.value;
+        if (!selectedPath) {
+            showStatus(homeStatus, 'Bitte wählen Sie eine Datei aus der Liste aus.', true);
+            return;
+        }
+
+        switchScreen('analysisScreen');
+        loadingSpinner.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        analysisStatus.style.display = 'none';
+        analyzeBtn.disabled = true;
+
+        try {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: selectedPath })
+            });
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.details || 'Analyse fehlgeschlagen.');
+            
+            if (!result.analysis_result || result.analysis_result.trim() === '') {
+                 throw new Error('Kein Analyseergebnis erhalten. Das Dokument ist möglicherweise noch nicht indiziert. Bitte warten Sie ein paar Minuten.');
+            }
+
+            marked.setOptions({ breaks: true, gfm: true });
+            resultsContainer.innerHTML = marked.parse(result.analysis_result);
+            resultsContainer.style.display = 'block';
+
+        } catch (error) {
+            showStatus(analysisStatus, error.message, true);
+        } finally {
+            loadingSpinner.style.display = 'none';
+            analyzeBtn.disabled = false;
+        }
+    }
+</script>
+</body>
 </html>
