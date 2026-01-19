@@ -6,9 +6,11 @@ import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, grounding
 
 # --- Configuration ---
-# Load configuration from environment variables
-GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-GCP_REGION = os.getenv("GCP_REGION", "europe-west1")
+# Load configuration from environment variables.
+# Note: These names must match the names set in deploy.sh
+PROJECT_ID = os.getenv("PROJECT_ID")
+GCP_REGION = os.getenv("GCP_REGION", "europe-west1") # Used for Vertex AI client
+DATA_STORE_LOCATION = os.getenv("DATA_STORE_LOCATION") # Used for Data Store path
 DATA_STORE_ID = os.getenv("DATA_STORE_ID")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
@@ -18,31 +20,38 @@ logging.basicConfig(level=logging.INFO)
 
 # --- Vertex AI Initialization ---
 try:
-    if GCP_PROJECT_ID:
-        vertexai.init(project=GCP_PROJECT_ID, location=GCP_REGION)
+    if PROJECT_ID:
+        vertexai.init(project=PROJECT_ID, location=GCP_REGION)
         app.logger.info("Vertex AI initialized successfully.")
     else:
-        app.logger.warning("GCP_PROJECT_ID not found. Vertex AI not initialized.")
+        app.logger.warning("PROJECT_ID not found. Vertex AI not initialized.")
 except Exception as e:
     app.logger.error(f"Error initializing Vertex AI: {e}")
 
 # --- Tool Definition for Data Store ---
 tools = []
-if GCP_PROJECT_ID and DATA_STORE_ID:
-    # Construct the full datastore resource name
-    datastore_resource_name = (
-        f"projects/{GCP_PROJECT_ID}/locations/{GCP_REGION}/collections/default_collection/"
-        f"dataStores/{DATA_STORE_ID}"
-    )
+if PROJECT_ID and DATA_STORE_ID and DATA_STORE_LOCATION:
+    # Check if the user provided the full path or just the ID
+    if DATA_STORE_ID.startswith("projects/"):
+        datastore_resource_name = DATA_STORE_ID
+        app.logger.info("Using full resource name for Data Store.")
+    else:
+        # Construct the full datastore resource name from the short ID
+        datastore_resource_name = (
+            f"projects/{PROJECT_ID}/locations/{DATA_STORE_LOCATION}/collections/default_collection/"
+            f"dataStores/{DATA_STORE_ID}"
+        )
+        app.logger.info("Constructing full resource name for Data Store from ID.")
+
     datastore_tool = Tool.from_retrieval(
         retrieval=grounding.Retrieval(
             source=grounding.VertexAISearch(datastore=datastore_resource_name)
         )
     )
     tools = [datastore_tool]
-    app.logger.info("Vertex AI Search tool configured.")
+    app.logger.info("Vertex AI Search tool configured successfully.")
 else:
-    app.logger.warning("GCP_PROJECT_ID or DATA_STORE_ID not found. Vertex AI Search tool not configured.")
+    app.logger.warning("PROJECT_ID, DATA_STORE_ID, or DATA_STORE_LOCATION not found. Vertex AI Search tool not configured.")
 
 # --- System Prompt ---
 SYSTEM_PROMPT = """
