@@ -138,10 +138,12 @@ def analyze_script():
     if not file_path:
         return jsonify({"error": "Missing 'file_path' in the request body."}), 400
 
+    app.logger.info(f"Received analysis request for: {file_path}")
     file_name = file_path.split("/")[-1]
 
     try:
         user_prompt = f"Analysiere den Inhalt der Datei '{file_name}'. Nutze dafür das Data Store Tool. Erstelle die drei geforderten Abschnitte (Zusammenfassung, Thematische Übersicht, Lernziele) basierend auf den abgerufenen Fakten."
+        app.logger.info(f"Generating content with prompt: '{user_prompt}'")
 
         model = GenerativeModel(
             model_name='gemini-2.5-flash',
@@ -150,22 +152,35 @@ def analyze_script():
         )
 
         response = model.generate_content(user_prompt)
+        app.logger.info(f"Raw model response: {response}")
 
-        full_text = "".join(part.text for part in response.candidates[0].content.parts if part.text)
+        # Safely extract text and check for empty response
+        full_text = ""
+        if response and response.candidates:
+            full_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, "text"))
 
+        if not full_text.strip():
+            app.logger.warning(f"Analysis for '{file_name}' resulted in an empty response. The document may not be indexed yet.")
+            return jsonify({
+                "error": "Empty analysis result.",
+                "details": "Das Dokument wurde nicht im Index gefunden. Bitte warten Sie einige Minuten, bis die Indizierung abgeschlossen ist, und versuchen Sie es erneut."
+            }), 404
+
+        # Safely extract grounding metadata
         used_sources = []
         if response.candidates and hasattr(response.candidates[0], 'grounding_metadata') and response.candidates[0].grounding_metadata:
             for chunk in response.candidates[0].grounding_metadata.grounding_chunks:
                 if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
                     used_sources.append(chunk.retrieved_context.uri)
 
+        app.logger.info(f"Successfully analyzed '{file_name}'.")
         return jsonify({
             "analysis_result": full_text,
             "used_sources": list(set(used_sources))
         }), 200
 
     except Exception as e:
-        app.logger.error(f"Error during analysis: {e}")
+        app.logger.error(f"Error during analysis for {file_name}: {e}")
         return jsonify({"error": "Internal server error during analysis.", "details": str(e)}), 500
 
 if __name__ == "__main__":
