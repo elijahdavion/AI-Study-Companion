@@ -85,7 +85,7 @@ def list_files():
         return jsonify({"error": "Server misconfiguration: GCS_BUCKET_NAME not set"}), 500
     
     try:
-        storage_client = storage.Client(project=GCP_PROJECT_ID)
+        storage_client = storage.Client(project=PROJECT_ID)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
         
         blobs = bucket.list_blobs()
@@ -117,7 +117,7 @@ def upload_file():
         
     if file and file.filename.lower().endswith(".pdf"):
         try:
-            storage_client = storage.Client(project=GCP_PROJECT_ID)
+            storage_client = storage.Client(project=PROJECT_ID)
             bucket = storage_client.bucket(GCS_BUCKET_NAME)
             blob = bucket.blob(file.filename)
             
