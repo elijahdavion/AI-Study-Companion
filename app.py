@@ -169,7 +169,7 @@ def analyze_script():
         app.logger.info(f"Generating content with prompt: '{user_prompt}'")
 
         model = GenerativeModel(
-            model_name='gemini-2.5-flash',
+            model_name='gemini-2.5-pro',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
@@ -226,7 +226,12 @@ def check_file_status():
             f"dataStores/{final_datastore_id}/branches/0"
         )
 
-        client = discoveryengine.DocumentServiceClient()
+        # Set the regional endpoint if not global
+        client_options = None
+        if DATA_STORE_LOCATION and DATA_STORE_LOCATION != "global":
+            client_options = {"api_endpoint": f"{DATA_STORE_LOCATION}-discoveryengine.googleapis.com"}
+
+        client = discoveryengine.DocumentServiceClient(client_options=client_options)
         
         # Search for the document by URI instead of guessing the ID
         request_search = discoveryengine.ListDocumentsRequest(
