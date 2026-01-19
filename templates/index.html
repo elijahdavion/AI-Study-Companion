@@ -1,279 +1,267 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Study Companion</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Marked.js for Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --text-color: #333;
-            --background-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            --border-radius: 12px;
-            --shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        .progress-bar {
+            transition: width 0.5s ease;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background-gradient);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+        .analysis-content h2 {
+            margin-top: 1.5rem;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 30px 40px;
-            max-width: 800px;
-            width: 100%;
-            animation: fadeIn 0.5s ease-out;
-            display: flex;
-            flex-direction: column;
+        .analysis-content ul {
+            margin-bottom: 1rem;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { color: var(--primary-color); font-size: 2.2em; cursor: pointer; }
-        .screen { display: none; animation: fadeIn 0.4s ease-out; }
-        .screen.active { display: flex; flex-direction: column; gap: 20px; }
-        .input-group, .upload-section { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; color: var(--text-color); font-weight: 600; }
-        select, button { width: 100%; padding: 12px; border-radius: 8px; font-size: 1em; }
-        select {
-            border: 2px solid #e0e0e0;
-            transition: border-color 0.3s;
-        }
-        select:focus { outline: none; border-color: var(--primary-color); }
-        button {
-            background: var(--background-gradient);
-            color: white;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .upload-section {
-            padding: 20px;
-            background: #f0f4ff;
-            border-radius: var(--border-radius);
-            border: 2px dashed var(--primary-color);
-            text-align: center;
-        }
-        input[type="file"] { display: none; }
-        .file-input-label {
-            cursor: pointer;
-            padding: 15px;
-            display: block;
-            border-radius: 8px;
-            background: white;
-            border: 1px solid #ddd;
-            color: #555;
-            transition: background 0.2s;
-        }
-        .file-input-label:hover { background: #fafcff; }
-        #fileNameDisplay { color: var(--primary-color); font-weight: 600; margin: 10px 0; font-size: 0.95em; }
-        .status-message {
-            padding: 12px;
-            margin-top: 15px;
-            border-radius: 8px;
-            font-weight: 500;
-            display: none;
-        }
-        .status-message.success { background: #e6f9f0; color: #0a7c2e; display: block; }
-        .status-message.error { background: #fee; color: #c33; display: block; }
-        .loading { text-align: center; padding: 40px; }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .results {
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-color);
-            overflow-y: auto;
-            max-height: 60vh;
-            line-height: 1.7;
-        }
-        .results h2, .results h3 { color: var(--primary-color); margin: 15px 0 10px; }
-        .back-button { width: auto; align-self: flex-start; background: #eef; color: var(--primary-color); border: 2px solid var(--primary-color); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 id="appTitle" onclick="goHome()">🎓 AI Study Companion</h1>
-        </div>
+<body class="bg-light">
 
-        <!-- Home Screen -->
-        <div class="screen active" id="homeScreen">
-            <div class="upload-section">
-                <label for="pdfUpload" class="file-input-label">📁 PDF zum Hochladen auswählen</label>
-                <input type="file" id="pdfUpload" accept=".pdf">
-                <div id="fileNameDisplay"></div>
-                <button id="uploadBtn" onclick="uploadFile()">🚀 Hochladen</button>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="text-center mb-4">AI Study Companion</h1>
+
+            <!-- Upload Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">1. Upload Document</h5>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input type="file" class="form-control" id="fileInput" accept=".pdf">
+                        <button class="btn btn-primary" type="button" onclick="handleFileUpload()" id="uploadBtn">Upload</button>
+                    </div>
+
+                    <!-- Loading Bar & Status -->
+                    <div id="uploadStatusContainer" style="display: none;">
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small id="statusText" class="text-muted">Initializing...</small>
+                            <div id="spinner" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="input-group">
-                <label for="fileDropdown">Oder eine vorhandene Datei analysieren:</label>
-                <select id="fileDropdown">
-                    <option value="">-- Bitte Datei wählen --</option>
-                </select>
+            <!-- Analysis Section -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">2. Analyze Document</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="fileSelect" class="form-label">Select a document to study:</label>
+                        <select class="form-select" id="fileSelect">
+                            <option selected disabled>Loading files...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success w-100" onclick="analyzeFile()" id="analyzeBtn">Generate Study Guide</button>
+                </div>
             </div>
 
-            <button id="analyzeBtn" onclick="analyzeSelectedFile()">📊 Skript analysieren</button>
-            <div id="homeStatus" class="status-message"></div>
-        </div>
-
-        <!-- Analysis Screen -->
-        <div class="screen" id="analysisScreen">
-            <button class="back-button" onclick="goHome()">← Zurück</button>
-            <div id="analysisStatus" class="status-message"></div>
-            <div class="loading" id="loadingSpinner">
-                <div class="spinner"></div>
-                <p>Analysiere Dokument... Dies kann einen Moment dauern.</p>
+            <!-- Results Section -->
+            <div id="resultSection" class="mt-4" style="display: none;">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title">Analysis Result</h4>
+                        <hr>
+                        <div id="analysisContent" class="analysis-content"></div>
+                        <div class="mt-3">
+                            <small class="text-muted"><strong>Sources:</strong> <span id="sourcesList"></span></small>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="results" id="resultsContainer"></div>
+
         </div>
     </div>
+</div>
 
 <script>
-    const homeScreen = document.getElementById('homeScreen');
-    const analysisScreen = document.getElementById('analysisScreen');
-    const pdfUpload = document.getElementById('pdfUpload');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const fileDropdown = document.getElementById('fileDropdown');
-    const homeStatus = document.getElementById('homeStatus');
-    const analysisStatus = document.getElementById('analysisStatus');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const resultsContainer = document.getElementById('resultsContainer');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
-
+    // Load files on page load
     document.addEventListener('DOMContentLoaded', loadFiles);
-
-    pdfUpload.addEventListener('change', () => {
-        fileNameDisplay.textContent = pdfUpload.files.length > 0 ? `Ausgewählt: ${pdfUpload.files[0].name}` : '';
-    });
-
-    function showStatus(element, message, isError = false) {
-        element.textContent = message;
-        element.className = `status-message ${isError ? 'error' : 'success'}`;
-    }
-
-    function switchScreen(screen) {
-        homeScreen.classList.remove('active');
-        analysisScreen.classList.remove('active');
-        document.getElementById(screen).classList.add('active');
-    }
-
-    function goHome() {
-        switchScreen('homeScreen');
-        homeStatus.style.display = 'none';
-        analysisStatus.style.display = 'none';
-    }
 
     async function loadFiles() {
         try {
             const response = await fetch('/files');
-            if (!response.ok) throw new Error('Dateiliste konnte nicht geladen werden.');
+            const data = await response.json();
+            const select = document.getElementById('fileSelect');
             
-            const { files } = await response.json();
-            fileDropdown.innerHTML = '<option value="">-- Bitte Datei wählen --</option>';
-            files.forEach(file => {
-                const option = new Option(file.name, file.path);
-                fileDropdown.add(option);
-            });
+            select.innerHTML = '<option selected disabled>Select a file...</option>';
+            
+            if (data.files && data.files.length > 0) {
+                data.files.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file.path;
+                    option.textContent = file.name;
+                    select.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.disabled = true;
+                option.textContent = "No files found";
+                select.appendChild(option);
+            }
         } catch (error) {
-            showStatus(homeStatus, error.message, true);
+            console.error('Error loading files:', error);
         }
     }
 
-    async function uploadFile() {
-        if (pdfUpload.files.length === 0) {
-            showStatus(homeStatus, 'Bitte wählen Sie eine Datei aus.', true);
-            return;
-        }
-        const file = pdfUpload.files[0];
+    async function handleFileUpload() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        if (!file) return alert("Please select a PDF file first.");
+
+        // UI: Reset and Show Loading
+        const container = document.getElementById('uploadStatusContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const spinner = document.getElementById('spinner');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        container.style.display = 'block';
+        spinner.style.display = 'block';
+        uploadBtn.disabled = true;
+        
+        // Step 1: Uploading
+        progressBar.style.width = '30%';
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+        statusText.innerText = "Uploading file to cloud...";
+
         const formData = new FormData();
         formData.append('file', file);
 
-        uploadBtn.disabled = true;
-        uploadBtn.textContent = 'Lade hoch...';
-        
         try {
-            const response = await fetch('/upload', { method: 'POST', body: formData });
-            const result = await response.json();
+            const uploadResponse = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadResponse.json();
 
-            if (!response.ok) throw new Error(result.details || 'Upload fehlgeschlagen.');
+            if (!uploadResponse.ok) throw new Error(uploadData.error || "Upload failed");
+
+            // Step 2: Indexing (Polling)
+            progressBar.style.width = '60%';
+            statusText.innerText = "Indexing... (This may take a minute)";
             
-            showStatus(homeStatus, result.message, false);
-            pdfUpload.value = '';
-            fileNameDisplay.textContent = '';
-            await loadFiles();
-            fileDropdown.value = result.path; // Select the newly uploaded file
-        } catch (error) {
-            showStatus(homeStatus, error.message, true);
-        } finally {
+            await pollForIndex(uploadData.path);
+
+            // Step 3: Success
+            progressBar.style.width = '100%';
+            progressBar.className = 'progress-bar bg-success';
+            statusText.innerText = "Ready! File is indexed and available.";
+            spinner.style.display = 'none';
             uploadBtn.disabled = false;
-            uploadBtn.textContent = '🚀 Hochladen';
+            
+            // Refresh dropdown
+            await loadFiles();
+            
+            // Clear input
+            fileInput.value = '';
+
+            // Hide bar after 3 seconds
+            setTimeout(() => {
+                container.style.display = 'none';
+                progressBar.style.width = '0%';
+            }, 3000);
+
+        } catch (error) {
+            console.error(error);
+            progressBar.className = 'progress-bar bg-danger';
+            statusText.innerText = "Error: " + error.message;
+            spinner.style.display = 'none';
+            uploadBtn.disabled = false;
         }
     }
 
-    async function analyzeSelectedFile() {
-        const selectedPath = fileDropdown.value;
-        if (!selectedPath) {
-            showStatus(homeStatus, 'Bitte wählen Sie eine Datei aus der Liste aus.', true);
-            return;
+    async function pollForIndex(gcsUri) {
+        const maxAttempts = 60; // Timeout after ~2 minutes
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            try {
+                const response = await fetch('/check_file_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gcs_uri: gcsUri })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 200 && data.status === 'INDEXED') {
+                    return true; // Success
+                }
+            } catch (e) {
+                console.warn("Polling check failed, retrying...", e);
+            }
+            
+            // Wait 2 seconds before next check
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            attempts++;
+        }
+        throw new Error("Indexing timed out. The file is taking too long to process.");
+    }
+
+    async function analyzeFile() {
+        const select = document.getElementById('fileSelect');
+        const filePath = select.value;
+        
+        if (!filePath || filePath.includes("Select a file")) {
+            return alert("Please select a file from the list.");
         }
 
-        switchScreen('analysisScreen');
-        loadingSpinner.style.display = 'block';
-        resultsContainer.style.display = 'none';
-        analysisStatus.style.display = 'none';
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultSection = document.getElementById('resultSection');
+        const analysisContent = document.getElementById('analysisContent');
+        const sourcesList = document.getElementById('sourcesList');
+
+        // UI: Loading State
         analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+        resultSection.style.display = 'none';
 
         try {
             const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_path: selectedPath })
+                body: JSON.stringify({ file_path: filePath })
             });
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.details || 'Analyse fehlgeschlagen.');
             
-            if (!result.analysis_result || result.analysis_result.trim() === '') {
-                 throw new Error('Kein Analyseergebnis erhalten. Das Dokument ist möglicherweise noch nicht indiziert. Bitte warten Sie ein paar Minuten.');
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.details || data.error || "Analysis failed");
+
+            // Render Markdown
+            analysisContent.innerHTML = marked.parse(data.analysis_result);
+            
+            // Show Sources
+            if (data.used_sources && data.used_sources.length > 0) {
+                sourcesList.innerText = data.used_sources.join(', ');
+            } else {
+                sourcesList.innerText = "No specific sources cited.";
             }
 
-            marked.setOptions({ breaks: true, gfm: true });
-            resultsContainer.innerHTML = marked.parse(result.analysis_result);
-            resultsContainer.style.display = 'block';
+            resultSection.style.display = 'block';
 
         } catch (error) {
-            showStatus(analysisStatus, error.message, true);
+            alert("Error during analysis: " + error.message);
         } finally {
-            loadingSpinner.style.display = 'none';
             analyzeBtn.disabled = false;
+            analyzeBtn.innerText = "Generate Study Guide";
         }
     }
 </script>
+
 </body>
 </html>
