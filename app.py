@@ -4,6 +4,8 @@ from flask import Flask, request, jsonify, render_template
 from google.cloud import storage
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, grounding
+from google.cloud import discoveryengine_v1 as discoveryengine
+from google.api_core import exceptions
 
 # --- Configuration ---
 # Load configuration from environment variables.
@@ -205,11 +207,6 @@ def analyze_script():
         return jsonify({"error": "Internal server error during analysis.", "details": str(e)}), 500
 
 
-# --- Imports for Document Status Check ---
-from google.cloud import discoveryengine_v1 as discoveryengine
-from google.api_core import exceptions
-import base64
-
 @app.route("/check_file_status", methods=['POST'])
 def check_file_status():
     """Checks if a document has been indexed in the data store."""
@@ -220,33 +217,33 @@ def check_file_status():
         return jsonify({"error": "Server misconfiguration, missing environment variables."}), 500
 
     try:
-        # For unstructured data, the document ID is the base64-encoded GCS URI.
-        document_id = base64.urlsafe_b64encode(gcs_uri.encode("utf-8")).decode("utf-8")
-        
-        # The branch ID is '0' for the default branch.
-        branch_id = "0"
-        
         # Get the actual data store ID if the full resource name was provided
         final_datastore_id = DATA_STORE_ID.split('/')[-1]
-
-        client = discoveryengine.DocumentServiceClient()
-        document_name = client.document_path(
-            project=PROJECT_ID,
-            location=DATA_STORE_LOCATION,
-            data_store=final_datastore_id,
-            branch=branch_id,
-            document=document_id,
+        
+        # Construct the parent branch resource name
+        parent = (
+            f"projects/{PROJECT_ID}/locations/{DATA_STORE_LOCATION}/collections/default_collection/"
+            f"dataStores/{final_datastore_id}/branches/0"
         )
 
-        app.logger.info(f"Checking for document: {document_name}")
-        client.get_document(name=document_name)
+        client = discoveryengine.DocumentServiceClient()
         
-        app.logger.info(f"Document '{gcs_uri}' found in index.")
-        return jsonify({"status": "INDEXED"}), 200
+        # Search for the document by URI instead of guessing the ID
+        request_search = discoveryengine.ListDocumentsRequest(
+            parent=parent,
+            filter=f'uri = "{gcs_uri}"'
+        )
+        
+        response = client.list_documents(request=request_search)
+        
+        # If we get any results, the document is indexed
+        if response.documents:
+            app.logger.info(f"Document '{gcs_uri}' found in index.")
+            return jsonify({"status": "INDEXED"}), 200
+        else:
+            app.logger.info(f"Document '{gcs_uri}' not found in index yet.")
+            return jsonify({"status": "PROCESSING"}), 202
 
-    except exceptions.NotFound:
-        app.logger.info(f"Document '{gcs_uri}' not found in index yet.")
-        return jsonify({"status": "PROCESSING"}), 202
     except Exception as e:
         app.logger.error(f"Error checking document status for '{gcs_uri}': {e}")
         return jsonify({"status": "FAILED", "details": str(e)}), 500
