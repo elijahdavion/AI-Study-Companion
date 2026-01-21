@@ -1,0 +1,276 @@
+2026-01-06 09:15:08     raise self
+2026-01-06 09:15:08   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 314, in continuation
+2026-01-06 09:15:08     response, call = self._thunk(new_method).with_call(
+2026-01-06 09:15:08                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:15:08   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 1180, in with_call
+2026-01-06 09:15:08     return _end_unary_response_blocking(state, call, True, None)
+2026-01-06 09:15:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:15:08   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 996, in _end_unary_response_blocking
+2026-01-06 09:15:08     raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+2026-01-06 09:15:08     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:15:08 grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+2026-01-06 09:15:08 	status = StatusCode.INVALID_ARGUMENT
+2026-01-06 09:15:08 	details = "Incorrect API endpoint used. The current endpoint can only serve traffic from "global" region, but got "europe-west1" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint."
+2026-01-06 09:15:08 	debug_error_string = "UNKNOWN:Error received from peer ipv4:142.251.173.95:443 {grpc_status:3, grpc_message:"Incorrect API endpoint used. The current endpoint can only serve traffic from \"global\" region, but got \"europe-west1\" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint."}"
+2026-01-06 09:15:08 >
+2026-01-06 09:15:08 The above exception was the direct cause of the following exception:
+2026-01-06 09:15:08 Traceback (most recent call last):
+  File "/app/app.py", line 283, in search_document_content
+    response = client.search(request=request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/cloud/discoveryengine_v1/services/search_service/client.py", line 940, in search
+    response = rpc(
+               ^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.InvalidArgument: 400 Incorrect API endpoint used. The current endpoint can only serve traffic from "global" region, but got "europe-west1" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint.
+2026-01-06 09:15:08 [2026-01-06 09:15:08,552] ERROR in app: Keine Inhalte für Datei '2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf' gefunden. Mögliche Ursachen: 1) Indexierung noch nicht abgeschlossen (5-30 Minuten nach Upload), 2) Dateiname stimmt nicht überein, 3) Dokument wurde nicht korrekt indexiert.
+2026-01-06 09:21:40 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/
+2026-01-06 09:21:40 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/list-files
+2026-01-06 09:30:36 [2026-01-06 09:30:36 +0000] [1] [INFO] Starting gunicorn 23.0.0
+2026-01-06 09:30:36 [2026-01-06 09:30:36 +0000] [1] [INFO] Listening at: http://0.0.0.0:8080 (1)
+2026-01-06 09:30:36 [2026-01-06 09:30:36 +0000] [1] [INFO] Using worker: gthread
+2026-01-06 09:30:36 [2026-01-06 09:30:36 +0000] [2] [INFO] Booting worker with pid: 2
+2026-01-06 09:30:38 [2026-01-06 09:30:38 +0000] [1] [INFO] Starting gunicorn 23.0.0
+2026-01-06 09:30:38 [2026-01-06 09:30:38 +0000] [1] [INFO] Listening at: http://0.0.0.0:8080 (1)
+2026-01-06 09:30:38 [2026-01-06 09:30:38 +0000] [1] [INFO] Using worker: gthread
+2026-01-06 09:30:38 [2026-01-06 09:30:38 +0000] [2] [INFO] Booting worker with pid: 2
+2026-01-06 09:30:47 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/
+2026-01-06 09:30:56 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/list-files
+2026-01-06 09:30:56 GET 404 https://study-companion-agent-62qefveuea-ew.a.run.app/favicon.ico
+2026-01-06 09:31:42 [2026-01-06 09:31:42 +0000] [1] [INFO] Handling signal: term
+2026-01-06 09:31:43 [2026-01-06 09:31:43 +0000] [2] [INFO] Worker exiting (pid: 2)
+2026-01-06 09:31:44 [2026-01-06 09:31:44 +0000] [1] [INFO] Shutting down: Master
+2026-01-06 09:33:34 POST 200 https://study-companion-agent-62qefveuea-ew.a.run.app/upload
+2026-01-06 09:33:36 [2026-01-06 09:33:36,158] ERROR in app: ❌ FEHLER beim Triggern der Indexierung für 2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf
+2026-01-06 09:33:36 [2026-01-06 09:33:36,158] ERROR in app: Error type: PermissionDenied
+2026-01-06 09:33:36 [2026-01-06 09:33:36,158] ERROR in app: Error message: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:33:36 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "resource"
+2026-01-06 09:33:36   value: "projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "permission"
+2026-01-06 09:33:36   value: "discoveryengine.documents.import"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 ]
+2026-01-06 09:33:36 [2026-01-06 09:33:36,177] ERROR in app: Full traceback:
+2026-01-06 09:33:36 Traceback (most recent call last):
+  File "/app/app.py", line 455, in trigger_indexing
+    operation = client.import_documents(request=request)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/cloud/discoveryengine_v1/services/document_service/client.py", line 1566, in import_documents
+    response = rpc(
+               ^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 294, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 156, in retry_target
+    next_sleep = _retry_error_helper(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_base.py", line 214, in _retry_error_helper
+    raise final_exc from source_exc
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 147, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/timeout.py", line 130, in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.PermissionDenied: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:33:36 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "resource"
+2026-01-06 09:33:36   value: "projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "permission"
+2026-01-06 09:33:36   value: "discoveryengine.documents.import"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 ]
+2026-01-06 09:33:36 [2026-01-06 09:33:36,177] ERROR in app: ❌ Indexierung fehlgeschlagen für 2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:33:36 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "resource"
+2026-01-06 09:33:36   value: "projects/ai-study-companion-480112/locations/europe-west1/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 metadata {
+2026-01-06 09:33:36   key: "permission"
+2026-01-06 09:33:36   value: "discoveryengine.documents.import"
+2026-01-06 09:33:36 }
+2026-01-06 09:33:36 ]
+2026-01-06 09:33:37 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/list-files
+2026-01-06 09:37:02 POST 404 https://study-companion-agent-62qefveuea-ew.a.run.app/analyze
+2026-01-06 09:37:02 [2026-01-06 09:37:02,208] ERROR in app: Fehler bei der Dokumentensuche: 400 Incorrect API endpoint used. The current endpoint can only serve traffic from "global" region, but got "europe-west1" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint.
+2026-01-06 09:37:02 [2026-01-06 09:37:02,208] ERROR in app: Exception type: InvalidArgument
+2026-01-06 09:37:02 [2026-01-06 09:37:02,220] ERROR in app: Traceback: Traceback (most recent call last):
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 75, in error_remapped_callable
+2026-01-06 09:37:02     return callable_(*args, **kwargs)
+2026-01-06 09:37:02            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 276, in __call__
+2026-01-06 09:37:02     response, ignored_call = self._with_call(
+2026-01-06 09:37:02                              ^^^^^^^^^^^^^^^^
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 331, in _with_call
+2026-01-06 09:37:02     return call.result(), call
+2026-01-06 09:37:02            ^^^^^^^^^^^^^
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 438, in result
+2026-01-06 09:37:02     raise self
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 314, in continuation
+2026-01-06 09:37:02     response, call = self._thunk(new_method).with_call(
+2026-01-06 09:37:02                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 1180, in with_call
+2026-01-06 09:37:02     return _end_unary_response_blocking(state, call, True, None)
+2026-01-06 09:37:02            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:37:02   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 996, in _end_unary_response_blocking
+2026-01-06 09:37:02     raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+2026-01-06 09:37:02     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:37:02 grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+2026-01-06 09:37:02 	status = StatusCode.INVALID_ARGUMENT
+2026-01-06 09:37:02 	details = "Incorrect API endpoint used. The current endpoint can only serve traffic from "global" region, but got "europe-west1" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint."
+2026-01-06 09:37:02 	debug_error_string = "UNKNOWN:Error received from peer ipv4:142.251.168.95:443 {grpc_message:"Incorrect API endpoint used. The current endpoint can only serve traffic from \"global\" region, but got \"europe-west1\" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint.", grpc_status:3}"
+2026-01-06 09:37:02 >
+2026-01-06 09:37:02 The above exception was the direct cause of the following exception:
+2026-01-06 09:37:02 Traceback (most recent call last):
+  File "/app/app.py", line 320, in search_document_content
+    response = client.search(request=request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/cloud/discoveryengine_v1/services/search_service/client.py", line 940, in search
+    response = rpc(
+               ^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.InvalidArgument: 400 Incorrect API endpoint used. The current endpoint can only serve traffic from "global" region, but got "europe-west1" region from the API request. Please follow https://cloud.google.com/generative-ai-app-builder/docs/locations to use the correct regional API endpoint.
+2026-01-06 09:37:02 [2026-01-06 09:37:02,221] ERROR in app: Keine Inhalte für Datei '2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf' gefunden. Das Dokument wurde vermutlich noch nicht indexiert. Bitte warten Sie 5-30 Minuten nach dem Upload und versuchen Sie es erneut.
+2026-01-06 09:37:02 [2026-01-06 09:37:02,221] ERROR in app: Upload time vs. now: Check if document was uploaded recently
+2026-01-06 09:45:39 [2026-01-06 09:45:39 +0000] [1] [INFO] Handling signal: term
+2026-01-06 09:45:43 [2026-01-06 09:45:43 +0000] [2] [INFO] Worker exiting (pid: 2)
+2026-01-06 09:45:44 [2026-01-06 09:45:44 +0000] [1] [INFO] Shutting down: Master
+2026-01-06 09:50:47 [2026-01-06 09:50:47 +0000] [1] [INFO] Starting gunicorn 23.0.0
+2026-01-06 09:50:47 [2026-01-06 09:50:47 +0000] [1] [INFO] Listening at: http://0.0.0.0:8080 (1)
+2026-01-06 09:50:47 [2026-01-06 09:50:47 +0000] [1] [INFO] Using worker: gthread
+2026-01-06 09:50:47 [2026-01-06 09:50:47 +0000] [2] [INFO] Booting worker with pid: 2
+2026-01-06 09:51:10 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/
+2026-01-06 09:51:18 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/list-files
+2026-01-06 09:51:25 POST 200 https://study-companion-agent-62qefveuea-ew.a.run.app/upload
+2026-01-06 09:51:27 [2026-01-06 09:51:27,038] ERROR in app: ❌ FEHLER beim Triggern der Indexierung für 2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf
+2026-01-06 09:51:27 [2026-01-06 09:51:27,039] ERROR in app: Error type: PermissionDenied
+2026-01-06 09:51:27 [2026-01-06 09:51:27,039] ERROR in app: Error message: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:51:27 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "resource"
+2026-01-06 09:51:27   value: "projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "permission"
+2026-01-06 09:51:27   value: "discoveryengine.documents.import"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 ]
+2026-01-06 09:51:27 [2026-01-06 09:51:27,053] ERROR in app: Full traceback:
+2026-01-06 09:51:27 Traceback (most recent call last):
+  File "/app/app.py", line 455, in trigger_indexing
+    operation = client.import_documents(request=request)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/cloud/discoveryengine_v1/services/document_service/client.py", line 1566, in import_documents
+    response = rpc(
+               ^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 294, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 156, in retry_target
+    next_sleep = _retry_error_helper(
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_base.py", line 214, in _retry_error_helper
+    raise final_exc from source_exc
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 147, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/timeout.py", line 130, in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.PermissionDenied: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:51:27 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "resource"
+2026-01-06 09:51:27   value: "projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "permission"
+2026-01-06 09:51:27   value: "discoveryengine.documents.import"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 ]
+2026-01-06 09:51:27 [2026-01-06 09:51:27,053] ERROR in app: ❌ Indexierung fehlgeschlagen für 2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf: 403 Permission 'discoveryengine.documents.import' denied on resource '//discoveryengine.googleapis.com/projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch' (or it may not exist). [reason: "IAM_PERMISSION_DENIED"
+2026-01-06 09:51:27 domain: "discoveryengine.googleapis.com"
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "resource"
+2026-01-06 09:51:27   value: "projects/ai-study-companion-480112/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355/branches/default_branch"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 metadata {
+2026-01-06 09:51:27   key: "permission"
+2026-01-06 09:51:27   value: "discoveryengine.documents.import"
+2026-01-06 09:51:27 }
+2026-01-06 09:51:27 ]
+2026-01-06 09:51:28 GET 200 https://study-companion-agent-62qefveuea-ew.a.run.app/list-files
+2026-01-06 09:51:31 POST 404 https://study-companion-agent-62qefveuea-ew.a.run.app/analyze
+2026-01-06 09:51:32 [2026-01-06 09:51:32,283] ERROR in app: Fehler bei der Dokumentensuche: 404 DataStore projects/345874054654/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355 not found.
+2026-01-06 09:51:32 [2026-01-06 09:51:32,283] ERROR in app: Exception type: NotFound
+2026-01-06 09:51:32 [2026-01-06 09:51:32,301] ERROR in app: Traceback: Traceback (most recent call last):
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 75, in error_remapped_callable
+2026-01-06 09:51:32     return callable_(*args, **kwargs)
+2026-01-06 09:51:32            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 276, in __call__
+2026-01-06 09:51:32     response, ignored_call = self._with_call(
+2026-01-06 09:51:32                              ^^^^^^^^^^^^^^^^
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 331, in _with_call
+2026-01-06 09:51:32     return call.result(), call
+2026-01-06 09:51:32            ^^^^^^^^^^^^^
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 438, in result
+2026-01-06 09:51:32     raise self
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_interceptor.py", line 314, in continuation
+2026-01-06 09:51:32     response, call = self._thunk(new_method).with_call(
+2026-01-06 09:51:32                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 1180, in with_call
+2026-01-06 09:51:32     return _end_unary_response_blocking(state, call, True, None)
+2026-01-06 09:51:32            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:51:32   File "/usr/local/lib/python3.11/site-packages/grpc/_channel.py", line 996, in _end_unary_response_blocking
+2026-01-06 09:51:32     raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+2026-01-06 09:51:32     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 09:51:32 grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+2026-01-06 09:51:32 	status = StatusCode.NOT_FOUND
+2026-01-06 09:51:32 	details = "DataStore projects/345874054654/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355 not found."
+2026-01-06 09:51:32 	debug_error_string = "UNKNOWN:Error received from peer ipv4:142.250.110.95:443 {grpc_status:5, grpc_message:"DataStore projects/345874054654/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355 not found."}"
+2026-01-06 09:51:32 >
+2026-01-06 09:51:32 The above exception was the direct cause of the following exception:
+2026-01-06 09:51:32 Traceback (most recent call last):
+  File "/app/app.py", line 320, in search_document_content
+    response = client.search(request=request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/cloud/discoveryengine_v1/services/search_service/client.py", line 940, in search
+    response = rpc(
+               ^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+google.api_core.exceptions.NotFound: 404 DataStore projects/345874054654/locations/global/collections/default_collection/dataStores/ai-study-companion-data-store_1765190826355 not found.
+2026-01-06 09:51:32 [2026-01-06 09:51:32,301] ERROR in app: Keine Inhalte für Datei '2026-01-06_Kapitel1_Beleuchtungstechnik_202510_v3.3.pdf' gefunden. Das Dokument wurde vermutlich noch nicht indexiert. Bitte warten Sie 5-30 Minuten nach dem Upload und versuchen Sie es erneut.
+2026-01-06 09:51:32 [2026-01-06 09:51:32,301] ERROR in app: Upload time vs. now: Check if document was uploaded recently
+2026-01-06 09:51:51 [2026-01-06 09:51:51 +0000] [1] [INFO] Handling signal: term
+2026-01-06 09:51:52 [2026-01-06 09:51:52 +0000] [2] [INFO] Worker exiting (pid: 2)
+2026-01-06 09:51:53 [2026-01-06 09:51:53 +0000] [1] [INFO] Shutting down: Master
