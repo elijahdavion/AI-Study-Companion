@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'europe-west1-docker.pkg.dev/ai-study-companion-480112/ai-study-companion-repo/asc-indexer', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'europe-west1-docker.pkg.dev/ai-study-companion-480112/ai-study-companion-repo/asc-indexer']
+images:
+- 'europe-west1-docker.pkg.dev/ai-study-companion-480112/ai-study-companion-repo/asc-indexer'

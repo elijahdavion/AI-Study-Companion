@@ -1,18 +1,28 @@
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
 
-# Setze Arbeitsverzeichnis
+# Set the working directory in the container
 WORKDIR /app
 
-# Kopiere requirements und installiere Dependencies
+# Copy the requirements file into the container at /app
 COPY requirements.txt .
+
+# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiere Anwendungscode und Templates
+# Copy your application code (app.py and indexer.py)
+# Both are copied into the same container for the main service
 COPY app.py .
-COPY templates/ ./templates/
+COPY indexer.py .
 
-# Exponiere Port (Cloud Run nutzt PORT env var)
-EXPOSE 8080
+# Assuming your frontend HTML is in a folder within your project root
+# IMPORTANT: Replace 'YOUR_FRONTEND_FOLDER_NAME' with the actual name of your frontend folder.
+# For example, if your frontend HTML is in a folder called 'web', you would put:
+# COPY web ./web
+COPY YOUR_FRONTEND_FOLDER_NAME ./YOUR_FRONTEND_FOLDER_NAME
 
-# Starte Anwendung mit Gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 --log-level debug app:app
+# Command to run the application using gunicorn
+# This tells gunicorn to look for an 'app' object within 'app.py'
+# Your web service (app.py) will listen on port 8080
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+
