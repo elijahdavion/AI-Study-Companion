@@ -11,18 +11,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy your application code (app.py and indexer.py)
-# Both are copied into the same container for the main service
+# Both are copied into this container. app.py will be run by gunicorn,
+# and indexer.py will be available for event-driven triggers (if this service handles them).
 COPY app.py .
 COPY indexer.py .
 
-# Assuming your frontend HTML is in a folder within your project root
-# IMPORTANT: Replace 'YOUR_FRONTEND_FOLDER_NAME' with the actual name of your frontend folder.
-# For example, if your frontend HTML is in a folder called 'web', you would put:
-# COPY web ./web
-COPY YOUR_FRONTEND_FOLDER_NAME ./YOUR_FRONTEND_FOLDER_NAME
+# Copy your frontend folder into the container
+# Based on your 'ls' output, your frontend folder is named 'frontend'
+COPY frontend ./frontend
 
 # Command to run the application using gunicorn
 # This tells gunicorn to look for an 'app' object within 'app.py'
 # Your web service (app.py) will listen on port 8080
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
-
