@@ -3,6 +3,7 @@ import json
 import os
 from flask import Flask, request
 from google.cloud import discoveryengine_v1 as discoveryengine
+from google.api_core.client_options import ClientOptions
 
 app = Flask(__name__)
 
@@ -19,9 +20,13 @@ def index():
         return 'Bad Request: No data in message', 400
 
     # Decode the GCS event notification from Pub/Sub
-    data = json.loads(base64.b64decode(message['data']).decode('utf-8'))
-    bucket = data.get('bucket')
-    name = data.get('name')
+    try:
+        data = json.loads(base64.b64decode(message['data']).decode('utf-8'))
+        bucket = data.get('bucket')
+        name = data.get('name')
+    except Exception as e:
+        print(f'Error decoding message data: {e}')
+        return 'Bad Request: Invalid message data', 400
 
     if not bucket or not name:
         print(f'Missing bucket or name in GCS event data: {data}')
@@ -40,7 +45,16 @@ def index():
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        client = discoveryengine.DocumentServiceClient()
+        # --- HIER WAR DER FEHLER: Alles muss eingerückt sein ---
+        
+        # API Endpoint dynamisch setzen, falls nicht global
+        client_options = None
+        if location != 'global':
+            api_endpoint = f"{location}-discoveryengine.googleapis.com"
+            client_options = ClientOptions(api_endpoint=api_endpoint)
+
+        client = discoveryengine.DocumentServiceClient(client_options=client_options)
+        
         parent = client.branch_path(
             project=project_id,
             location=location,
@@ -56,6 +70,7 @@ def index():
 
         operation = client.import_documents(request=request_body)
         print(f'Started document import operation: {operation.operation.name}')
+        
     except Exception as e:
         print(f'Error during Discovery Engine import: {e}')
         return f'Internal Server Error: {e}', 500
