@@ -32,7 +32,8 @@ def index():
 
     project_id = os.environ.get('GCP_PROJECT_ID')
     data_store_id = os.environ.get('DATA_STORE_ID')
-    location = 'global'  # For Discovery Engine Data Store
+    # Wir holen die Location aus der Variable, oder nutzen 'global' als Notlösung
+    location = os.environ.get('DATA_STORE_LOCATION', 'global')
 
     if not project_id or not data_store_id:
         print('Missing GCP_PROJECT_ID or DATA_STORE_ID environment variables')
