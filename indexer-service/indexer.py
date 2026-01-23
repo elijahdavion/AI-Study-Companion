@@ -45,13 +45,11 @@ def index():
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # API Endpoint Logik:
-        # 'global' und 'us' nutzen den Standard-Endpoint (discoveryengine.googleapis.com).
-        # Nur für andere Regionen (z.B. europe-west1) müssen wir den Endpoint anpassen.
+        # WICHTIGE ÄNDERUNG:
+        # Für Vertex AI Search nutzen wir IMMER den Standard-Endpoint.
+        # Die Location wird nur unten im 'parent'-Pfad (client.branch_path) genutzt.
         client_options = None
-        if location and location != 'global' and location != 'us':
-            api_endpoint = f"{location}-discoveryengine.googleapis.com"
-            client_options = ClientOptions(api_endpoint=api_endpoint)
+        # (Wir löschen die Zeilen mit api_endpoint = ... komplett)
 
         client = discoveryengine.DocumentServiceClient(client_options=client_options)
         
