@@ -51,7 +51,6 @@ def index():
             client_options = ClientOptions(api_endpoint=api_endpoint)
             print(f"Using Regional API Endpoint: {api_endpoint} (REST)")
 
-        # Wir nutzen REST, um sicherzugehen
         client = discoveryengine.DocumentServiceClient(
             client_options=client_options,
             transport="rest"
@@ -64,26 +63,26 @@ def index():
             branch='default_branch'
         )
 
-        # --- WICHTIGE ÄNDERUNG: Saubere ID generieren ---
-        # Dateinamen haben oft Umlaute/Leerzeichen. Vertex AI IDs dürfen das nicht.
-        # Wir erstellen einen "Hash" (Fingerabdruck) des Namens als ID.
+        # ID generieren (Hash)
         doc_id = hashlib.md5(name.encode('utf-8')).hexdigest()
 
-        # --- WICHTIGE ÄNDERUNG: Inline Source statt GcsSource ---
-        # Wir erstellen das Dokument-Objekt hier im Code
+        # --- KORREKTUR HIER ---
+        # Die URI muss in ein 'Content'-Objekt verpackt werden.
+        # 'content_uri' als direktes Argument gibt es nicht mehr.
         document = discoveryengine.Document(
             id=doc_id,
-            content_uri=gcs_uri, # Hier sagen wir: "Der Inhalt liegt im Bucket"
+            content=discoveryengine.Document.Content(
+                uri=gcs_uri,
+                mime_type='application/pdf'
+            ),
             parent=f"{parent}/documents/{doc_id}"
         )
 
-        # Wir senden das Objekt direkt, statt Google auf eine JSON-Datei zu verweisen
         request_body = discoveryengine.ImportDocumentsRequest(
             parent=parent,
             inline_source=discoveryengine.ImportDocumentsRequest.InlineSource(
                 documents=[document]
             ),
-            # INCREMENTAL sorgt dafür, dass existierende Docs aktualisiert werden
             reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.INCREMENTAL
         )
 
