@@ -43,16 +43,18 @@ def index():
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # --- KORREKTUR START ---
-        # Wir müssen den Endpunkt explizit auf Europa setzen, sonst suchen wir in den USA.
+        # --- FIX: Regional Endpoint + REST Transport ---
         client_options = None
         if location and location != 'global':
             api_endpoint = f"{location}-discoveryengine.googleapis.com"
             client_options = ClientOptions(api_endpoint=api_endpoint)
-            print(f"Using Regional API Endpoint: {api_endpoint}")
-        # --- KORREKTUR ENDE ---
+            print(f"Using Regional API Endpoint: {api_endpoint} (REST)")
 
-        client = discoveryengine.DocumentServiceClient(client_options=client_options)
+        # WICHTIG: Wir erzwingen transport="rest", um gRPC/HTTP2 Fehler zu umgehen
+        client = discoveryengine.DocumentServiceClient(
+            client_options=client_options,
+            transport="rest"
+        )
 
         parent = client.branch_path(
             project=project_id,
