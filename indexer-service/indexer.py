@@ -19,7 +19,6 @@ def index():
         print('No data in Pub/Sub message')
         return 'Bad Request: No data in message', 400
 
-    # Decode the GCS event notification from Pub/Sub
     try:
         data = json.loads(base64.b64decode(message['data']).decode('utf-8'))
         bucket = data.get('bucket')
@@ -33,26 +32,28 @@ def index():
         return 'Bad Request: Missing GCS object details', 400
 
     gcs_uri = f'gs://{bucket}/{name}'
-    print(f'Received event for: {gcs_uri}')
+    print(f'Processing file: {gcs_uri}')
 
     project_id = os.environ.get('GCP_PROJECT_ID')
     data_store_id = os.environ.get('DATA_STORE_ID')
-    # Wir holen die Location aus der Variable, oder nutzen 'global' als Notlösung
     location = os.environ.get('DATA_STORE_LOCATION', 'global')
 
     if not project_id or not data_store_id:
-        print('Missing GCP_PROJECT_ID or DATA_STORE_ID environment variables')
+        print('Error: Missing GCP_PROJECT_ID or DATA_STORE_ID environment variables')
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # WICHTIGE ÄNDERUNG:
-        # Für Vertex AI Search nutzen wir IMMER den Standard-Endpoint.
-        # Die Location wird nur unten im 'parent'-Pfad (client.branch_path) genutzt.
+        # --- KORREKTUR START ---
+        # Wir müssen den Endpunkt explizit auf Europa setzen, sonst suchen wir in den USA.
         client_options = None
-        # (Wir löschen die Zeilen mit api_endpoint = ... komplett)
+        if location and location != 'global':
+            api_endpoint = f"{location}-discoveryengine.googleapis.com"
+            client_options = ClientOptions(api_endpoint=api_endpoint)
+            print(f"Using Regional API Endpoint: {api_endpoint}")
+        # --- KORREKTUR ENDE ---
 
         client = discoveryengine.DocumentServiceClient(client_options=client_options)
-        
+
         parent = client.branch_path(
             project=project_id,
             location=location,
@@ -77,4 +78,4 @@ def index():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
