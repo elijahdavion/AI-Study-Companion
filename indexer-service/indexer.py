@@ -45,11 +45,11 @@ def index():
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # --- HIER WAR DER FEHLER: Alles muss eingerückt sein ---
-        
-        # API Endpoint dynamisch setzen, falls nicht global
+        # API Endpoint Logik:
+        # 'global' und 'us' nutzen den Standard-Endpoint (discoveryengine.googleapis.com).
+        # Nur für andere Regionen (z.B. europe-west1) müssen wir den Endpoint anpassen.
         client_options = None
-        if location != 'global':
+        if location and location != 'global' and location != 'us':
             api_endpoint = f"{location}-discoveryengine.googleapis.com"
             client_options = ClientOptions(api_endpoint=api_endpoint)
 
