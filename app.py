@@ -233,21 +233,16 @@ def check_file_status():
 
         client = discoveryengine.DocumentServiceClient(client_options=client_options)
         
-        # Search for the document by URI instead of guessing the ID
-        request_search = discoveryengine.ListDocumentsRequest(
-            parent=parent,
-            filter=f'uri = "{gcs_uri}"'
-        )
+        # FIX: Wir laden die Liste und prüfen die URI manuell, um den 'filter' Fehler zu umgehen
+        request_list = discoveryengine.ListDocumentsRequest(parent=parent)
+        page_result = client.list_documents(request=request_list)
         
-        response = client.list_documents(request=request_search)
+        for doc in page_result:
+            if (hasattr(doc, 'content') and doc.content.uri == gcs_uri) or (hasattr(doc, 'uri') and doc.uri == gcs_uri):
+                app.logger.info(f"Document '{gcs_uri}' found in index.")
+                return jsonify({"status": "INDEXED"}), 200
         
-        # If we get any results, the document is indexed
-        if response.documents:
-            app.logger.info(f"Document '{gcs_uri}' found in index.")
-            return jsonify({"status": "INDEXED"}), 200
-        else:
-            app.logger.info(f"Document '{gcs_uri}' not found in index yet.")
-            return jsonify({"status": "PROCESSING"}), 202
+        return jsonify({"status": "PROCESSING"}), 202
 
     except Exception as e:
         app.logger.error(f"Error checking document status for '{gcs_uri}': {e}")
