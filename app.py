@@ -167,11 +167,12 @@ def analyze_script():
     try:
         user_prompt = f"Analysiere den Inhalt der Datei '{file_name}'. Nutze dafür das Data Store Tool. Erstelle die drei geforderten Abschnitte (Zusammenfassung, Thematische Übersicht, Lernziele) basierend auf den abgerufenen Fakten."
         
+        # In der EU Region (europe-west1) ist dieser Name am sichersten:
         model = GenerativeModel(
-            model_name='gemini-1.5-flash', # Stabiler für Grounding
-            system_instruction=SYSTEM_PROMPT,
-            tools=tools
-        )
+        model_name='publishers/google/models/gemini-1.5-flash',
+        system_instruction=SYSTEM_PROMPT,
+        tools=tools
+    )
 
         response = model.generate_content(user_prompt)
         
