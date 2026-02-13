@@ -166,27 +166,28 @@ def analyze_script():
 
     try:
         user_prompt = f"Analysiere den Inhalt der Datei '{file_name}'. Nutze dafür das Data Store Tool. Erstelle die drei geforderten Abschnitte (Zusammenfassung, Thematische Übersicht, Lernziele) basierend auf den abgerufenen Fakten."
-        app.logger.info(f"Generating content with prompt: '{user_prompt}'")
-
+        
         model = GenerativeModel(
-            model_name='gemini-2.5-flash',
+            model_name='gemini-1.5-flash', # Stabiler für Grounding
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
 
         response = model.generate_content(user_prompt)
-        app.logger.info(f"Raw model response: {response}")
+        
+        # Prüfung auf "Finish Reason" (oft SAFETY oder OTHER, wenn Grounding fehlschlägt)
+        if response.candidates[0].finish_reason != 1: # 1 = STOP (Erfolg)
+            app.logger.warning(f"Modell beendete mit Grund: {response.candidates[0].finish_reason}")
 
-        # Safely extract text and check for empty response
         full_text = ""
         if response and response.candidates:
             full_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, "text"))
 
+        # Falls Text leer ist, ist das Dokument meist noch nicht im Vektor-Index verfügbar
         if not full_text.strip():
-            app.logger.warning(f"Analysis for '{file_name}' resulted in an empty response. The document may not be indexed yet.")
             return jsonify({
-                "error": "Empty analysis result.",
-                "details": "Das Dokument wurde nicht im Index gefunden. Bitte warten Sie einige Minuten, bis die Indizierung abgeschlossen ist, und versuchen Sie es erneut."
+                "error": "Inhalt noch nicht verfügbar.",
+                "details": "Die Datei wurde gefunden, aber die KI kann die Inhalte noch nicht lesen. Bitte warte ca. 2-3 Minuten, bis die automatische Indizierung abgeschlossen ist."
             }), 404
 
         # Safely extract grounding metadata

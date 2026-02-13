@@ -44,42 +44,32 @@ def index():
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # Regionaler Endpoint für EU
-        client_options = None
-        if location and location != 'global':
-            api_endpoint = f"{location}-discoveryengine.googleapis.com"
-            client_options = ClientOptions(api_endpoint=api_endpoint)
-            print(f"Using Regional API Endpoint: {api_endpoint} (REST)")
+        # 1. Client-Optionen für die EU-Region (Zwingend erforderlich)
+        api_endpoint = f"{location}-discoveryengine.googleapis.com"
+        client_options = ClientOptions(api_endpoint=api_endpoint)
+        print(f"Using Regional API Endpoint: {api_endpoint}")
 
         client = discoveryengine.DocumentServiceClient(
             client_options=client_options,
-            transport="rest"
+            transport="rest"  # REST ist in Cloud Run oft weniger anfällig für gRPC-Timeouts
         )
 
-        # SICHERER PFAD FÜR EU: 
-        # Wir bauen den Pfad manuell mit 'branches/0', da 'default_branch' in EU oft hakt.
+        # 2. Ressourcen-Pfad (Branch 0 ist korrekt für EU)
         parent = f"projects/{project_id}/locations/{location}/collections/default_collection/dataStores/{data_store_id}/branches/0"
 
-        # ID generieren (Hash)
-        doc_id = hashlib.md5(name.encode('utf-8')).hexdigest()
-
-        # Dokument Objekt ohne das fehlerhafte 'parent' Feld
-        document = discoveryengine.Document(
-            id=doc_id,
-            content=discoveryengine.Document.Content(
-                uri=gcs_uri,
-                mime_type='application/pdf'
-            )
+        # 3. Konfiguration der GCS-Quelle (Der stabilste Weg für PDFs)
+        gcs_source = discoveryengine.GcsSource(
+            input_uris=[gcs_uri],
+            data_schema="content" # 'content' signalisiert unstrukturierte Daten (PDF)
         )
 
         request_body = discoveryengine.ImportDocumentsRequest(
             parent=parent,
-            inline_source=discoveryengine.ImportDocumentsRequest.InlineSource(
-                documents=[document]
-            ),
+            gcs_source=gcs_source,
             reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.INCREMENTAL
         )
 
+        # 4. Operation starten
         operation = client.import_documents(request=request_body)
         print(f'Started document import operation: {operation.operation.name}')
         
