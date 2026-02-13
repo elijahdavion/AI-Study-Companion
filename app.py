@@ -169,7 +169,7 @@ def analyze_script():
         app.logger.info(f"Generating content with prompt: '{user_prompt}'")
 
         model = GenerativeModel(
-            model_name='gemini-2.5-pro',
+            model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
