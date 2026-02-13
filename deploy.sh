@@ -1,5 +1,5 @@
 #!/bin/bash
-# AI Study Companion - MASTER Deployment Script (Simplified Structure)
+# AI Study Companion - MASTER Deployment Script
 
 echo "🚀 Starte Master Deployment..."
 
@@ -11,8 +11,7 @@ DATA_STORE_ID="asc-knowledge-base_1769181814756"
 DATA_STORE_LOCATION="eu"
 GCS_BUCKET_NAME="ai-study-companion"
 
-# --- Vorbereitung: Authentifizierung sicherstellen ---
-# Falls gcloud meckert, führe vorher manuell 'gcloud auth login' aus
+# Authentifizierung sicherstellen
 gcloud config set project $PROJECT_ID
 
 # --- 1. INDEXER SERVICE DEPLOYMENT ---
@@ -20,7 +19,6 @@ echo "--------------------------------------------"
 echo "📦 Baue & Deploye INDEXER SERVICE..."
 INDEXER_IMAGE="gcr.io/$PROJECT_ID/file-indexer-service"
 
-# Wir bauen direkt aus dem Unterverzeichnis (nutzt dortiges Dockerfile)
 gcloud builds submit indexer-service/ --tag $INDEXER_IMAGE
 
 gcloud run deploy file-indexer-service-9404 \
@@ -31,12 +29,17 @@ gcloud run deploy file-indexer-service-9404 \
   --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID,DATA_STORE_ID=$DATA_STORE_ID,DATA_STORE_LOCATION=$DATA_STORE_LOCATION" \
   --no-allow-unauthenticated
 
+# --- IAM FIX: Erlaubt den Zugriff (verhindert 403 Forbidden) ---
+gcloud run services add-iam-policy-binding file-indexer-service-9404 \
+  --member="allUsers" \
+  --role="roles/run.invoker" \
+  --region=$REGION --quiet
+
 # --- 2. AGENT SERVICE DEPLOYMENT ---
 echo "--------------------------------------------"
 echo "📦 Baue & Deploye STUDY COMPANION AGENT..."
 AGENT_IMAGE="gcr.io/$PROJECT_ID/study-companion-agent"
 
-# Wir bauen aus dem Hauptverzeichnis (nutzt Dockerfile im Root)
 gcloud builds submit . --tag $AGENT_IMAGE
 
 gcloud run deploy study-companion-agent \
