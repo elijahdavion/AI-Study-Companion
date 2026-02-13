@@ -66,16 +66,14 @@ def index():
         # ID generieren (Hash)
         doc_id = hashlib.md5(name.encode('utf-8')).hexdigest()
 
-        # --- KORREKTUR HIER ---
-        # Die URI muss in ein 'Content'-Objekt verpackt werden.
-        # 'content_uri' als direktes Argument gibt es nicht mehr.
+        # --- KORREKTUR ERFOLGT HIER ---
+        # 'parent' wurde aus dem Document-Konstruktor entfernt, da es dort nicht existiert.
         document = discoveryengine.Document(
             id=doc_id,
             content=discoveryengine.Document.Content(
                 uri=gcs_uri,
                 mime_type='application/pdf'
-            ),
-            parent=f"{parent}/documents/{doc_id}"
+            )
         )
 
         request_body = discoveryengine.ImportDocumentsRequest(
