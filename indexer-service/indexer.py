@@ -37,14 +37,14 @@ def index():
 
     project_id = os.environ.get('GCP_PROJECT_ID')
     data_store_id = os.environ.get('DATA_STORE_ID')
-    location = os.environ.get('DATA_STORE_LOCATION', 'global')
+    location = os.environ.get('DATA_STORE_LOCATION', 'eu')
 
     if not project_id or not data_store_id:
         print('Error: Missing GCP_PROJECT_ID or DATA_STORE_ID environment variables')
         return 'Internal Server Error: Configuration missing', 500
 
     try:
-        # --- Config für Location ---
+        # Regionaler Endpoint für EU
         client_options = None
         if location and location != 'global':
             api_endpoint = f"{location}-discoveryengine.googleapis.com"
@@ -56,18 +56,14 @@ def index():
             transport="rest"
         )
 
-        parent = client.branch_path(
-            project=project_id,
-            location=location,
-            data_store=data_store_id,
-            branch='default_branch'
-        )
+        # SICHERER PFAD FÜR EU: 
+        # Wir bauen den Pfad manuell mit 'branches/0', da 'default_branch' in EU oft hakt.
+        parent = f"projects/{project_id}/locations/{location}/collections/default_collection/dataStores/{data_store_id}/branches/0"
 
         # ID generieren (Hash)
         doc_id = hashlib.md5(name.encode('utf-8')).hexdigest()
 
-        # --- KORREKTUR ERFOLGT HIER ---
-        # 'parent' wurde aus dem Document-Konstruktor entfernt, da es dort nicht existiert.
+        # Dokument Objekt ohne das fehlerhafte 'parent' Feld
         document = discoveryengine.Document(
             id=doc_id,
             content=discoveryengine.Document.Content(
