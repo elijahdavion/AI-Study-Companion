@@ -1,7 +1,7 @@
 #!/bin/bash
 # AI Study Companion - MASTER Deployment Script
 
-echo "🚀 Starte Master Deployment mit spezifischen Dockerfiles..."
+echo "🚀 Starte Master Deployment..."
 
 # --- Konfiguration ---
 PROJECT_ID="ai-study-companion-480112"
@@ -16,10 +16,12 @@ echo "--------------------------------------------"
 echo "📦 Baue INDEXER SERVICE (Dockerfile.index)..."
 INDEXER_IMAGE="gcr.io/$PROJECT_ID/file-indexer-service"
 
-# Wir nutzen --config oder weisen Docker an, das spezifische File zu nutzen
-# Da gcloud builds submit das lokale Verzeichnis packt:
-gcloud builds submit --tag $INDEXER_IMAGE --dockerfile indexer-service/Dockerfile.index indexer-service/
+# Wechsel in den Unterordner, um lokal zu bauen
+cd indexer-service
+gcloud builds submit --tag $INDEXER_IMAGE --dockerfile Dockerfile.index .
+cd ..
 
+echo "🚀 Deploye INDEXER SERVICE..."
 gcloud run deploy file-indexer-service-9404 \
   --image $INDEXER_IMAGE \
   --platform managed \
@@ -33,8 +35,10 @@ echo "--------------------------------------------"
 echo "📦 Baue STUDY COMPANION AGENT (Dockerfile.app)..."
 AGENT_IMAGE="gcr.io/$PROJECT_ID/study-companion-agent"
 
+# Bauen aus dem Hauptverzeichnis
 gcloud builds submit --tag $AGENT_IMAGE --dockerfile Dockerfile.app .
 
+echo "🚀 Deploye STUDY COMPANION AGENT..."
 gcloud run deploy study-companion-agent \
   --image $AGENT_IMAGE \
   --platform managed \
@@ -47,4 +51,6 @@ gcloud run deploy study-companion-agent \
   --timeout 300
 
 echo "--------------------------------------------"
-echo "✅ Deployment abgeschlossen!"
+echo "✅ Master Deployment abgeschlossen!"
+URL=$(gcloud run services describe study-companion-agent --platform managed --region $REGION --format 'value(status.url)')
+echo "🌐 App URL: $URL"
