@@ -1,5 +1,5 @@
 #!/bin/bash
-# AI Study Companion - MASTER Deployment Script
+# AI Study Companion - MASTER Deployment Script (Simplified Structure)
 
 echo "🚀 Starte Master Deployment..."
 
@@ -11,17 +11,18 @@ DATA_STORE_ID="asc-knowledge-base_1769181814756"
 DATA_STORE_LOCATION="eu"
 GCS_BUCKET_NAME="ai-study-companion"
 
+# --- Vorbereitung: Authentifizierung sicherstellen ---
+# Falls gcloud meckert, führe vorher manuell 'gcloud auth login' aus
+gcloud config set project $PROJECT_ID
+
 # --- 1. INDEXER SERVICE DEPLOYMENT ---
 echo "--------------------------------------------"
-echo "📦 Baue INDEXER SERVICE (Dockerfile.index)..."
+echo "📦 Baue & Deploye INDEXER SERVICE..."
 INDEXER_IMAGE="gcr.io/$PROJECT_ID/file-indexer-service"
 
-# Wechsel in den Unterordner, um lokal zu bauen
-cd indexer-service
-gcloud builds submit --tag $INDEXER_IMAGE --dockerfile Dockerfile.index .
-cd ..
+# Wir bauen direkt aus dem Unterverzeichnis (nutzt dortiges Dockerfile)
+gcloud builds submit indexer-service/ --tag $INDEXER_IMAGE
 
-echo "🚀 Deploye INDEXER SERVICE..."
 gcloud run deploy file-indexer-service-9404 \
   --image $INDEXER_IMAGE \
   --platform managed \
@@ -32,13 +33,12 @@ gcloud run deploy file-indexer-service-9404 \
 
 # --- 2. AGENT SERVICE DEPLOYMENT ---
 echo "--------------------------------------------"
-echo "📦 Baue STUDY COMPANION AGENT (Dockerfile.app)..."
+echo "📦 Baue & Deploye STUDY COMPANION AGENT..."
 AGENT_IMAGE="gcr.io/$PROJECT_ID/study-companion-agent"
 
-# Bauen aus dem Hauptverzeichnis
-gcloud builds submit --tag $AGENT_IMAGE --dockerfile Dockerfile.app .
+# Wir bauen aus dem Hauptverzeichnis (nutzt Dockerfile im Root)
+gcloud builds submit . --tag $AGENT_IMAGE
 
-echo "🚀 Deploye STUDY COMPANION AGENT..."
 gcloud run deploy study-companion-agent \
   --image $AGENT_IMAGE \
   --platform managed \
@@ -51,6 +51,6 @@ gcloud run deploy study-companion-agent \
   --timeout 300
 
 echo "--------------------------------------------"
-echo "✅ Master Deployment abgeschlossen!"
+echo "✅ Master Deployment erfolgreich abgeschlossen!"
 URL=$(gcloud run services describe study-companion-agent --platform managed --region $REGION --format 'value(status.url)')
-echo "🌐 App URL: $URL"
+echo "🌐 Deine App ist jetzt live unter: $URL"

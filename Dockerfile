@@ -17,7 +17,7 @@ COPY app.py .
 COPY indexer-service ./indexer-service
 
 # Copy your frontend folder into the container
-COPY frontend ./frontend
+COPY templates ./templates
 
 # Command to run the application using gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
