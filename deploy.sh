@@ -1,34 +1,48 @@
 #!/bin/bash
-# AI Study Companion - Cloud Run Deployment Script
+# AI Study Companion - MASTER Deployment Script (Agent & Indexer)
 
-echo "🚀 Starting deployment process..."
+echo "🚀 Starting Master Deployment..."
 
-# --- Konfiguration (HIER KORRIGIERT) ---
+# --- Gemeinsame Konfiguration ---
 PROJECT_ID="ai-study-companion-480112"
-SERVICE_NAME="study-companion-agent"
 REGION="europe-west1"
-IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 SERVICE_ACCOUNT="study-companion-sa@$PROJECT_ID.iam.gserviceaccount.com"
 
-# KORREKTUR: Neue ID aus deinem Screenshot
-DATA_STORE_ID="asc-knowledge-base_1769181814756" 
+# Korrekte IDs aus deinem System
+DATA_STORE_ID="asc-knowledge-base_1769181814756"
 DATA_STORE_LOCATION="eu"
-# KORREKTUR: Bucket-Name (Bitte prüfen, ob 'ai-study-companion' oder 'ai-study-companion-bucket' korrekt ist)
 GCS_BUCKET_NAME="ai-study-companion"
 
-# Schritt 1: Image bauen
-echo "📦 Building Docker image..."
-gcloud builds submit --tag $IMAGE_NAME
+# --- 1. INDEXER SERVICE DEPLOYMENT ---
+echo "--------------------------------------------"
+echo "📦 Building & Deploying INDEXER SERVICE..."
+echo "--------------------------------------------"
+INDEXER_IMAGE="gcr.io/$PROJECT_ID/file-indexer-service"
 
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed!"
-    exit 1
-fi
+# Build & Push für den Indexer (aus dem Unterordner)
+gcloud builds submit indexer-service --tag $INDEXER_IMAGE
 
-# Schritt 2: Zu Cloud Run deployen
-echo "🚀 Deploying to Cloud Run..."
-gcloud run deploy $SERVICE_NAME \
-  --image $IMAGE_NAME \
+# Deployment des Indexers
+gcloud run deploy file-indexer-service-9404 \
+  --image $INDEXER_IMAGE \
+  --platform managed \
+  --region $REGION \
+  --service-account $SERVICE_ACCOUNT \
+  --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID,DATA_STORE_ID=$DATA_STORE_ID,DATA_STORE_LOCATION=$DATA_STORE_LOCATION" \
+  --no-allow-unauthenticated
+
+# --- 2. AGENT SERVICE DEPLOYMENT ---
+echo "--------------------------------------------"
+echo "📦 Building & Deploying STUDY COMPANION AGENT..."
+echo "--------------------------------------------"
+AGENT_IMAGE="gcr.io/$PROJECT_ID/study-companion-agent"
+
+# Build & Push für den Agent (aus dem Hauptverzeichnis)
+gcloud builds submit --tag $AGENT_IMAGE
+
+# Deployment des Agents
+gcloud run deploy study-companion-agent \
+  --image $AGENT_IMAGE \
   --platform managed \
   --region $REGION \
   --service-account $SERVICE_ACCOUNT \
@@ -38,13 +52,8 @@ gcloud run deploy $SERVICE_NAME \
   --cpu 1 \
   --timeout 300
 
-if [ $? -ne 0 ]; then
-    echo "❌ Deployment failed!"
-    exit 1
-fi
-
-echo "✅ Deployment successful!"
-
-# URL abrufen
-URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')
-echo "🌐 Service URL: $URL"
+echo "--------------------------------------------"
+echo "✅ Master Deployment erfolgreich abgeschlossen!"
+URL=$(gcloud run services describe study-companion-agent --platform managed --region $REGION --format 'value(status.url)')
+echo "🌐 Deine App ist erreichbar unter: $URL"
+echo "--------------------------------------------"
