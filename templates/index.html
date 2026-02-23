@@ -5,94 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Study Companion</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --text-color: #333;
-            --background-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            --border-radius: 12px;
-            --shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background-gradient);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 30px 40px;
-            max-width: 800px;
-            width: 100%;
-            animation: fadeIn 0.5s ease-out;
-            display: flex; flex-direction: column;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { color: var(--primary-color); font-size: 2.2em; cursor: pointer; }
-        .screen { display: none; animation: fadeIn 0.4s ease-out; }
-        .screen.active { display: flex; flex-direction: column; gap: 20px; }
-        label { display: block; margin-bottom: 8px; color: var(--text-color); font-weight: 600; }
-        select, button { width: 100%; padding: 12px; border-radius: 8px; font-size: 1em; }
-        select { border: 2px solid #e0e0e0; transition: border-color 0.3s; }
-        select:focus { outline: none; border-color: var(--primary-color); }
-        button {
-            background: var(--background-gradient);
-            color: white;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .upload-section {
-            padding: 20px;
-            background: #f0f4ff;
-            border-radius: var(--border-radius);
-            border: 2px dashed var(--primary-color);
-            text-align: center;
-        }
-        input[type="file"] { display: none; }
-        .file-input-label {
-            cursor: pointer; padding: 15px; display: block; border-radius: 8px;
-            background: white; border: 1px solid #ddd; color: #555;
-        }
-        #fileNameDisplay { color: var(--primary-color); font-weight: 600; margin: 10px 0; font-size: 0.95em; }
-        .status-message { padding: 12px; margin-top: 15px; border-radius: 8px; font-weight: 500; display: none; }
-        .status-message.success { background: #e6f9f0; color: #0a7c2e; display: block; }
-        .status-message.error { background: #fee; color: #c33; display: block; }
-        .loading { text-align: center; padding: 40px; }
-        .spinner {
-            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color);
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;
-        }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .progress-container {
-            width: 100%; background-color: #e0e0e0; border-radius: 10px;
-            margin: 20px 0; height: 12px; overflow: hidden; display: none;
-        }
-        .progress-bar { height: 100%; width: 0%; background: var(--background-gradient); transition: width 0.5s ease; }
-        .results {
-            padding: 20px; background: #f8f9fa; border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-color); overflow-y: auto; max-height: 60vh; line-height: 1.7;
-        }
-        .back-button { width: auto; align-self: flex-start; background: #eef; color: var(--primary-color); border: 2px solid var(--primary-color); }
-    </style>
+   <style>
+    :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --text-color: #333;
+        --background-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        --border-radius: 12px;
+        --shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--background-gradient);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+    .container {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 30px 40px;
+        max-width: 800px;
+        width: 100%;
+        animation: fadeIn 0.5s ease-out;
+        display: flex; flex-direction: column;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 { color: var(--primary-color); font-size: 2.2em; cursor: pointer; }
+    .screen { display: none; animation: fadeIn 0.4s ease-out; }
+    .screen.active { display: flex; flex-direction: column; gap: 20px; }
+    label { display: block; margin-bottom: 8px; color: var(--text-color); font-weight: 600; }
+    select, button { width: 100%; padding: 12px; border-radius: 8px; font-size: 1em; }
+    select { border: 2px solid #e0e0e0; transition: border-color 0.3s; }
+    select:focus { outline: none; border-color: var(--primary-color); }
+    button {
+        background: var(--background-gradient);
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .upload-section {
+        padding: 20px;
+        background: #f0f4ff;
+        border-radius: var(--border-radius);
+        border: 2px dashed var(--primary-color);
+        text-align: center;
+    }
+    input[type="file"] { display: none; }
+    .file-input-label {
+        cursor: pointer; padding: 15px; display: block; border-radius: 8px;
+        background: white; border: 1px solid #ddd; color: #555;
+    }
+    #fileNameDisplay { color: var(--primary-color); font-weight: 600; margin: 10px 0; font-size: 0.95em; }
+    
+    /* FIX: Kompakte Status-Meldungen */
+    .status-message { padding: 12px; margin-top: 15px; border-radius: 8px; font-weight: 500; display: none; }
+    .status-message.success { background: #e6f9f0; color: #0a7c2e; display: block; }
+    .status-message.error { background: #fee; color: #c33; display: block; }
+    
+    .loading { text-align: center; padding: 40px; }
+    .spinner {
+        border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color);
+        border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    /* FIX: Fortschrittsbalken Design */
+    .progress-container {
+        width: 100%; background-color: #e0e0e0; border-radius: 10px;
+        margin-top: 15px; height: 12px; overflow: hidden; display: none;
+    }
+    .progress-bar { height: 100%; width: 0%; background: var(--background-gradient); transition: width 0.5s ease; }
+    
+    /* FIX: Analyse-Text unter dem Balken */
+    #homeLoadingText { font-size: 0.8em; color: #666; margin-top: 8px; font-style: italic; }
+
+    .results {
+        padding: 20px; background: #f8f9fa; border-radius: var(--border-radius);
+        border-left: 4px solid var(--primary-color); overflow-y: auto; max-height: 60vh; line-height: 1.7;
+    }
+    .back-button { width: auto; align-self: flex-start; background: #eef; color: var(--primary-color); border: 2px solid var(--primary-color); }
+</style>
 </head>
 <body>
-    <div class="screen active" id="homeScreen">
+    <div class="container">
+        <div class="header">
+            <h1 id="appTitle" onclick="goHome()">🎓 AI Study Companion</h1>
+        </div>
+
+        <div class="screen active" id="homeScreen">
             <div class="upload-section">
                 <label for="pdfUpload" class="file-input-label">📁 PDF zum Hochladen auswählen</label>
                 <input type="file" id="pdfUpload" accept=".pdf">
@@ -102,8 +116,9 @@
                 <div class="progress-container" id="progressContainer">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
-                <p id="homeLoadingText" style="margin-top:10px; font-size:0.9em; color:#555;"></p>
+                <p id="homeLoadingText"></p> 
             </div>
+
             <div class="input-group">
                 <label for="fileDropdown">Oder vorhandene Datei wählen:</label>
                 <select id="fileDropdown"><option value="">Lade Dateien...</option></select>
