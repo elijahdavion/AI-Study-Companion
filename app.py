@@ -193,21 +193,16 @@ def analyze_script():
             tools=tools
         )
 
-        # 2. TOOL_CONFIG Korrektur: Wir nutzen die direkte Klasse aus dem SDK
-        from vertexai.generative_models import ToolConfig, gapic_types
-        
-        # Wir bauen die Config manuell auf, um den __init__ Fehler zu umgehen
-        tool_config = ToolConfig(
-            forced_function_calling_config=gapic_types.Condition(
-                mode=gapic_types.Condition.Mode.ANY,
-                allowed_function_names=[]
-            )
-        )
+        # 2. Die stabilste Art der Konfiguration: Ein einfaches Dictionary
+        # Das umgeht alle "AttributeError" und "ImportError" Probleme
+        tool_config = {
+            "forced_function_calling_config": {
+                "mode": "ANY",
+                "allowed_function_names": []
+            }
+        }
 
-        # 3. Content generieren
-        # Falls 'gapic_types' bei dir Probleme macht, nutze alternativ:
-        # tool_config = {"forced_function_calling_config": {"mode": "ANY"}}
-        
+        # 3. Content generieren mit dem Dictionary
         response = model.generate_content(
             user_prompt,
             tool_config=tool_config
