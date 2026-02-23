@@ -186,24 +186,25 @@ def analyze_script():
             f"Antworte NUR mit den Fakten aus dieser Datei."
         )
         
-        # 1. Modell definieren (Kurzname für europe-west1)
+       # 1. Modell definieren
         model = GenerativeModel(
             model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
 
-        # 2. TOOL_CONFIG hinzufügen: Zwingt die KI, das Such-Tool tatsächlich zu verwenden
+        # 2. TOOL_CONFIG korrigiert: Zwingt die KI zur Tool-Nutzung
         from vertexai.generative_models import ToolConfig
         
+        # Korrekte Syntax für das erzwungene Discovery Engine Retrieval
         tool_config = ToolConfig(
-            forced_function_calling_config=ToolConfig.ForcedFunctionCallingConfig(
-                mode=ToolConfig.ForcedFunctionCallingConfig.Mode.ANY,
-                allowed_function_names=[] # Leer lassen für Retrieval-Tools
-            )
+            forced_function_calling_config={
+                "mode": "ANY", # "ANY" zwingt zum Tool-Einsatz
+                "allowed_function_names": [] 
+            }
         )
 
-        # 3. Content generieren (mit der tool_config!)
+        # 3. Content generieren
         response = model.generate_content(
             user_prompt,
             tool_config=tool_config

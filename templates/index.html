@@ -191,8 +191,12 @@ async function uploadFile() {
 
             // Schritt 2: Polling der Indizierung
             let indexed = false;
-            for (let i = 0; i < 30; i++) {
-                progressBar.style.width = `${20 + (i * 2)}%`;
+            // Wir prüfen alle 10 Sekunden, maximal 12 Mal (2 Minuten)
+            for (let i = 0; i < 12; i++) {
+                let progress = 20 + (i * 5);
+                progressBar.style.width = `${progress}%`;
+                fileNameDisplay.textContent = `Warte auf Google Cloud Index... (${i+1}/12)`;
+
                 const statusRes = await fetch('/check_file_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -201,14 +205,15 @@ async function uploadFile() {
                 const statusData = await statusRes.json();
                 
                 if (statusData.status === 'INDEXED') {
-                    // NEU: Wenn 'INDEXED', warte zusätzliche 20 Sekunden für die Vektorisierung
+                    // WICHTIG: Wenn Google "INDEXED" sagt, braucht das System oft noch 20-30 Sek
+                    // bis die Vektoren für die KI lesbar sind.
                     progressBar.style.width = '90%';
-                    fileNameDisplay.textContent = "Fast fertig... KI lernt die Inhalte (OCR Phase)...";
-                    await new Promise(r => setTimeout(r, 20000)); 
+                    fileNameDisplay.textContent = "Fast fertig! Finale Vektorisierung...";
+                    await new Promise(r => setTimeout(r, 25000)); // Sicherheits-Puffer
                     indexed = true;
                     break;
                 }
-                await new Promise(r => setTimeout(r, 10000));
+                await new Promise(r => setTimeout(r, 10000)); 
             }
 
             if (!indexed) throw new Error("Indizierung dauert zu lange. Die Datei erscheint gleich im Dropdown.");
