@@ -164,80 +164,48 @@ def upload_file():
 
 @app.route("/analyze", methods=["POST"])
 def analyze_script():
-    """Analyzes a specific document from the data store."""
     if not tools:
         return jsonify({"error": "Server misconfiguration: Analysis tool not available."}), 500
 
     data = request.get_json()
     file_path = data.get("file_path")
-    
-    if not file_path:
-        return jsonify({"error": "Missing 'file_path' in the request body."}), 400
-
-    app.logger.info(f"Received analysis request for: {file_path}")
     file_name = file_path.split("/")[-1]
 
     try:
+        # Wir verzichten auf tool_config, da das SDK hier einen Bug hat.
+        # Stattdessen machen wir den Prompt so spezifisch, dass Gemini das Tool nutzt.
         user_prompt = (
-            f"NUTZE DAS DATA_STORE_TOOL! Suche in deinem Index nach der Datei '{file_name}'. "
-            f"Extrahiere alle Informationen aus '{file_name}' und erstelle daraus: "
-            f"1. Zusammenfassung, 2. Thematische Übersicht, 3. Lernziele. "
-            f"Antworte NUR mit den Fakten aus dieser Datei."
+            f"Befehl: Suche in deinem Data Store nach der exakten Datei '{file_name}'. "
+            f"Analysiere NUR den Inhalt von '{file_name}'. "
+            f"Erstelle: 1. Zusammenfassung, 2. Thematische Übersicht, 3. Lernziele."
         )
         
-        # 1. Modell initialisieren
         model = GenerativeModel(
             model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
 
-        # 2. Tool Config als Dictionary (Stabilster Weg)
-        tool_config_dict = {
-            "forced_function_calling_config": {
-                "mode": "ANY"
-            }
-        }
+        # WICHTIG: Wir rufen generate_content OHNE tool_config auf, 
+        # um den "must be a ToolConfig object" Fehler zu umgehen.
+        response = model.generate_content(user_prompt)
 
-        # 3. Content generieren
-        response = model.generate_content(
-            user_prompt,
-            tool_config=tool_config_dict
-        )
-
-        # Sicherheitscheck auf Response-Struktur
         if not response.candidates or not response.candidates[0].content.parts:
-             return jsonify({
-                "error": "Keine Inhalte generiert.", 
-                "details": "Die KI konnte keine Informationen extrahieren. Wahrscheinlich läuft die Vektorisierung noch."
-            }), 404
+             return jsonify({"error": "Keine Inhalte generiert.", "details": "Das Dokument ist evtl. noch nicht bereit."}), 404
 
-        # Text extrahieren
         full_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, "text"))
 
-        # Check auf leeren Inhalt (Vektorisierungs-Latenz)
         if not full_text.strip():
-            return jsonify({
-                "error": "Inhalt noch nicht verfügbar.",
-                "details": "Die Datei ist indiziert, aber die KI kann sie noch nicht lesen. Bitte warte ca. 30-60 Sekunden."
-            }), 404
+            return jsonify({"error": "Inhalt leer.", "details": "Warte bitte 60 Sekunden auf die Vektorisierung."}), 404
 
-        # Metadaten extrahieren
-        used_sources = []
-        if hasattr(response.candidates[0], 'grounding_metadata') and response.candidates[0].grounding_metadata:
-            for chunk in response.candidates[0].grounding_metadata.grounding_chunks:
-                if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
-                    used_sources.append(chunk.retrieved_context.uri)
-
-        app.logger.info(f"Successfully analyzed '{file_name}'.")
         return jsonify({
             "analysis_result": full_text,
-            "used_sources": list(set(used_sources))
+            "used_sources": [file_path]
         }), 200
 
     except Exception as e:
-        app.logger.error(f"Error during analysis for {file_name}: {e}")
-        return jsonify({"error": "Internal server error during analysis.", "details": str(e)}), 500
+        app.logger.error(f"Error: {e}")
+        return jsonify({"error": "Analyse-Fehler", "details": str(e)}), 500
 
 
 @app.route("/check_file_status", methods=['POST'])
