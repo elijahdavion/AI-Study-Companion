@@ -3,7 +3,7 @@ import logging
 from flask import Flask, request, jsonify, render_template
 from google.cloud import storage
 import vertexai
-from vertexai.generative_models import GenerativeModel, Tool, grounding, ToolConfig
+from vertexai.generative_models import GenerativeModel, Tool, grounding
 from google.cloud import discoveryengine_v1 as discoveryengine
 from google.api_core import exceptions
 
@@ -193,16 +193,17 @@ def analyze_script():
             tools=tools
         )
 
-       # 2. KORREKTUR: ToolConfig als Objekt statt Dictionary
+        # 2. Absolut stabilster Weg für ToolConfig in Version 1.70.0+
+        # Wir definieren das ToolConfig Objekt direkt mit dem Mode-String
+        from vertexai.generative_models import ToolConfig
+        
         tool_config = ToolConfig(
             forced_function_calling_config=ToolConfig.ForcedFunctionCallingConfig(
-                # Manchmal ist "ANY" (als String) oder Mode.ANY korrekt. 
-                # Die stabilste Variante für 1.70.0 ist:
-                mode="ANY" 
+                mode="ANY" # String-Literal ist oft stabiler als das Enum
             )
-        )       
+        )
 
-        # 3. Content generieren mit dem Dictionary
+        # 3. Content generieren
         response = model.generate_content(
             user_prompt,
             tool_config=tool_config
