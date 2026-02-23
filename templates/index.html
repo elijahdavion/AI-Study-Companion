@@ -167,20 +167,59 @@
         }
     }
 
-    async function uploadFile() {
+async function uploadFile() {
         if (pdfUpload.files.length === 0) return showStatus(homeStatus, "Wähle eine Datei", true);
         const uploadBtn = document.getElementById('uploadBtn');
-        uploadBtn.disabled = true; homeStatus.style.display = 'none';
+        const file = pdfUpload.files[0];
+        uploadBtn.disabled = true;
+        homeStatus.style.display = 'none';
+        
+        // UI für Fortschritt vorbereiten
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '10%';
+        fileNameDisplay.textContent = "Lade hoch und indiziere... Bitte warten.";
 
-        const formData = new FormData(); formData.append('file', pdfUpload.files[0]);
+        const formData = new FormData();
+        formData.append('file', file);
+        
         try {
+            // Schritt 1: Tatsächlicher Upload
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (!res.ok) throw new Error("Upload fehlgeschlagen");
-            showStatus(homeStatus, "Upload erfolgreich!", false);
-            await loadFiles();
+            const uploadData = await res.json();
+            const gcsUri = uploadData.path;
+
+            // Schritt 2: Polling der Indizierung (30% bis 90%)
+            let indexed = false;
+            for (let i = 0; i < 30; i++) {
+                progressBar.style.width = `${20 + (i * 2.3)}%`; // Balken wächst langsam
+                const statusRes = await fetch('/check_file_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gcs_uri: gcsUri })
+                });
+                const statusData = await statusRes.json();
+                
+                if (statusData.status === 'INDEXED') {
+                    indexed = true;
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 10000)); // 10 Sek warten
+            }
+
+            if (!indexed) throw new Error("Indizierung dauert zu lange. Die Datei erscheint gleich im Dropdown.");
+
+            progressBar.style.width = '100%';
+            showStatus(homeStatus, "Upload und Indizierung erfolgreich!", false);
+            await loadFiles(); // Dropdown aktualisieren
+            fileNameDisplay.textContent = "";
+            pdfUpload.value = "";
         } catch (error) {
             showStatus(homeStatus, error.message, true);
-        } finally { uploadBtn.disabled = false; }
+        } finally {
+            uploadBtn.disabled = false;
+            setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
+        }
     }
 
     async function analyzeSelectedFile() {
@@ -191,29 +230,12 @@
         analysisScreen.classList.add('active');
         loadingSpinner.style.display = 'block';
         resultsContainer.style.display = 'none';
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '5%';
+        loadingText.textContent = "KI analysiert das Skript...";
 
         try {
-            let indexed = false;
-            for (let i = 0; i < 30; i++) {
-                loadingText.textContent = `Prüfe Indizierung... (${i+1}/30)`;
-                const statusRes = await fetch('/check_file_status', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ gcs_uri: path })
-                });
-                const statusData = await statusRes.json();
-                if (statusData.status === 'INDEXED') { indexed = true; break; }
-                progressBar.style.width = `${5 + (i * 3)}%`;
-                await new Promise(r => setTimeout(r, 10000));
-            }
-
-            if (!indexed) throw new Error("Indizierung dauert zu lange. Bitte später versuchen.");
-
-            progressBar.style.width = '100%';
-            loadingText.textContent = "Generiere Analyse...";
             const res = await fetch('/analyze', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file_path: path })
             });
             const data = await res.json();
@@ -225,7 +247,6 @@
             showStatus(analysisStatus, error.message, true);
         } finally {
             loadingSpinner.style.display = 'none';
-            progressContainer.style.display = 'none';
         }
     }
 </script>

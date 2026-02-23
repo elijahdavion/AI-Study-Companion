@@ -94,27 +94,40 @@ def home():
 
 @app.route("/files", methods=["GET"])
 def list_files():
-    """Lists all PDF files in the GCS bucket."""
-    if not GCS_BUCKET_NAME:
-        return jsonify({"error": "Server misconfiguration: GCS_BUCKET_NAME not set"}), 500
+    """Lists only PDF files that are already indexed in the data store."""
+    if not all([GCS_BUCKET_NAME, PROJECT_ID, DATA_STORE_ID, DATA_STORE_LOCATION]):
+        return jsonify({"error": "Server misconfiguration"}), 500
     
     try:
+        # 1. Holen der Liste aller bereits indizierten URIs aus Vertex AI Search
+        indexed_uris = []
+        final_datastore_id = DATA_STORE_ID.split('/')[-1]
+        parent = f"projects/{PROJECT_ID}/locations/{DATA_STORE_LOCATION}/collections/default_collection/dataStores/{final_datastore_id}/branches/0"
+        
+        endpoint = "eu-discoveryengine.googleapis.com" if DATA_STORE_LOCATION.lower() in ["eu", "europe-west1"] else f"{DATA_STORE_LOCATION}-discoveryengine.googleapis.com"
+        client = discoveryengine.DocumentServiceClient(client_options={"api_endpoint": endpoint})
+        
+        page_result = client.list_documents(parent=parent)
+        for doc in page_result:
+            uri = getattr(doc, 'content', {}).uri or getattr(doc, 'uri', "")
+            if uri: indexed_uris.append(uri)
+
+        # 2. Abgleich mit dem GCS Bucket
         storage_client = storage.Client(project=PROJECT_ID)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
-        
         blobs = bucket.list_blobs()
+        
         files = [
             {"name": blob.name, "path": f"gs://{GCS_BUCKET_NAME}/{blob.name}"}
             for blob in blobs
-            if blob.name.lower().endswith(".pdf")
+            if blob.name.lower().endswith(".pdf") and f"gs://{GCS_BUCKET_NAME}/{blob.name}" in indexed_uris
         ]
         
         files.sort(key=lambda x: x['name'])
-        
         return jsonify({"files": files}), 200
     except Exception as e:
-        app.logger.error(f"Error listing files: {e}")
-        return jsonify({"error": "Could not list files from bucket.", "details": str(e)}), 500
+        app.logger.error(f"Error listing indexed files: {e}")
+        return jsonify({"error": "Could not list files.", "details": str(e)}), 500
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
