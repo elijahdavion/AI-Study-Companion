@@ -178,7 +178,6 @@ def analyze_script():
     file_name = file_path.split("/")[-1]
 
     try:
-        # KORREKTUR: Aggressiverer Prompt, um Tool-Nutzung zu erzwingen
         user_prompt = (
             f"NUTZE DAS DATA_STORE_TOOL! Suche in deinem Index nach der Datei '{file_name}'. "
             f"Extrahiere alle Informationen aus '{file_name}' und erstelle daraus: "
@@ -186,52 +185,46 @@ def analyze_script():
             f"Antworte NUR mit den Fakten aus dieser Datei."
         )
         
-       # 1. Modell definieren
+        # 1. Modell initialisieren
         model = GenerativeModel(
             model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
 
-        # 2. Absolut stabilster Weg für ToolConfig in Version 1.70.0+
-        # Wir definieren das ToolConfig Objekt direkt mit dem Mode-String
-        from vertexai.generative_models import ToolConfig
-        
-        tool_config = ToolConfig(
-            forced_function_calling_config=ToolConfig.ForcedFunctionCallingConfig(
-                mode="ANY" # String-Literal ist oft stabiler als das Enum
-            )
-        )
+        # 2. Tool Config als Dictionary (Stabilster Weg)
+        tool_config_dict = {
+            "forced_function_calling_config": {
+                "mode": "ANY"
+            }
+        }
 
         # 3. Content generieren
         response = model.generate_content(
             user_prompt,
-            tool_config=tool_config
+            tool_config=tool_config_dict
         )
-        # NEU: Sicherheitscheck (verhindert Abstürze bei leeren Antworten)
+
+        # Sicherheitscheck auf Response-Struktur
         if not response.candidates or not response.candidates[0].content.parts:
-            return jsonify({
-                "error": "Keine Inhalte generiert.",
-                "details": "Das Modell konnte keine Informationen extrahieren. Eventuell ist die Indizierung noch nicht fertig."
+             return jsonify({
+                "error": "Keine Inhalte generiert.", 
+                "details": "Die KI konnte keine Informationen extrahieren. Wahrscheinlich läuft die Vektorisierung noch."
             }), 404
-        # Prüfung auf "Finish Reason" (oft SAFETY oder OTHER, wenn Grounding fehlschlägt)
-        if response.candidates[0].finish_reason != 1: # 1 = STOP (Erfolg)
-            app.logger.warning(f"Modell beendete mit Grund: {response.candidates[0].finish_reason}")
 
-        full_text = ""
-        if response and response.candidates:
-            full_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, "text"))
+        # Text extrahieren
+        full_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, "text"))
 
-        # Falls Text leer ist, ist das Dokument meist noch nicht im Vektor-Index verfügbar
+        # Check auf leeren Inhalt (Vektorisierungs-Latenz)
         if not full_text.strip():
             return jsonify({
                 "error": "Inhalt noch nicht verfügbar.",
-                "details": "Die Datei wurde gefunden, aber die KI kann die Inhalte noch nicht lesen. Bitte warte ca. 2-3 Minuten, bis die automatische Indizierung abgeschlossen ist."
+                "details": "Die Datei ist indiziert, aber die KI kann sie noch nicht lesen. Bitte warte ca. 30-60 Sekunden."
             }), 404
 
-        # Safely extract grounding metadata
+        # Metadaten extrahieren
         used_sources = []
-        if response.candidates and hasattr(response.candidates[0], 'grounding_metadata') and response.candidates[0].grounding_metadata:
+        if hasattr(response.candidates[0], 'grounding_metadata') and response.candidates[0].grounding_metadata:
             for chunk in response.candidates[0].grounding_metadata.grounding_chunks:
                 if hasattr(chunk, "retrieved_context") and chunk.retrieved_context:
                     used_sources.append(chunk.retrieved_context.uri)
