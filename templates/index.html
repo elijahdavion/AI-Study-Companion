@@ -86,9 +86,20 @@
     /* FIX: Fortschrittsbalken Design */
     .progress-container {
         width: 100%; background-color: #e0e0e0; border-radius: 10px;
-        margin-top: 15px; height: 12px; overflow: hidden; display: none;
+        margin-top: 15px; height: 18px; overflow: hidden; display: none;
     }
-    .progress-bar { height: 100%; width: 0%; background: var(--background-gradient); transition: width 0.5s ease; }
+    .progress-bar { height: 100%; width: 0%; background: var(--background-gradient); transition: width 0.5s ease;
+                    /* Hier sind die Änderungen für die Positionierung: */
+                    display: flex;
+                    align-items: center;      /* Vertikal mittig */
+                    justify-content: flex-start; /* Horizontal nach links (Anfang des Balkens) */
+                    
+                    padding-left: 10px;       /* Ein kleiner Abstand vom linken Rand, damit die Zahl nicht klebt */
+                    color: white;             /* Farbe der Prozentzahl */
+                    font-size: 0.75em;        /* Schriftgröße nach Bedarf anpassen */
+                    font-weight: bold;
+                    white-space: nowrap;      /* Verhindert Zeilenumbruch der Zahl */
+                    }
     
     /* FIX: Analyse-Text unter dem Balken */
     #homeLoadingText { font-size: 0.8em; color: #666; margin-top: 8px; font-style: italic; }
