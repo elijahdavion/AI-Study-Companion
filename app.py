@@ -135,12 +135,16 @@ def upload_file():
             bucket = storage_client.bucket(GCS_BUCKET_NAME)
             blob = bucket.blob(file.filename)
             
+            # Direktes Hochladen der File
             blob.upload_from_file(file)
+
+            # WICHTIG: Wir geben die URI zurück, die check_file_status erwartet
+            gcs_uri = f"gs://{GCS_BUCKET_NAME}/{file.filename}"
             
             return jsonify({
                 "success": True, 
                 "message": f"File '{file.filename}' uploaded successfully.",
-                "path": f"gs://{GCS_BUCKET_NAME}/{file.filename}",
+                "gcs_uri": gcs_uri, # Eindeutige ID für das spätere Polling
                 "filename": file.filename
             }), 201
         except Exception as e:

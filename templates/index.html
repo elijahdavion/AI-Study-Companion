@@ -102,7 +102,7 @@
                 <label for="pdfUpload" class="file-input-label">📁 PDF zum Hochladen auswählen</label>
                 <input type="file" id="pdfUpload" accept=".pdf">
                 <div id="fileNameDisplay"></div>
-                <button id="uploadBtn" onclick="uploadFile()">🚀 Hochladen</button>
+                <button id="uploadBtn" onclick="uploadAndProcessFile()">🚀 Hochladen</button>
             </div>
             <div class="input-group">
                 <label for="fileDropdown">Oder vorhandene Datei wählen:</label>
@@ -167,21 +167,102 @@
         }
     }
 
-    async function uploadFile() {
-        if (pdfUpload.files.length === 0) return showStatus(homeStatus, "Wähle eine Datei", true);
-        const uploadBtn = document.getElementById('uploadBtn');
-        uploadBtn.disabled = true; homeStatus.style.display = 'none';
-
-        const formData = new FormData(); formData.append('file', pdfUpload.files[0]);
-        try {
-            const res = await fetch('/upload', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error("Upload fehlgeschlagen");
-            showStatus(homeStatus, "Upload erfolgreich!", false);
-            await loadFiles();
-        } catch (error) {
-            showStatus(homeStatus, error.message, true);
-        } finally { uploadBtn.disabled = false; }
+async function uploadAndProcessFile() {
+    const fileInput = document.getElementById('pdfUpload'); 
+    // Wir nutzen loadingText, da dieser auf dem Analysis-Screen sichtbar ist
+    const statusDisplay = document.getElementById('loadingText');
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        showStatus(homeStatus, "Bitte wähle erst eine Datei aus.", true);
+        return;
     }
+
+    // UI Vorbereitung: Wechsel zum Lade-Screen
+    homeScreen.classList.remove('active');
+    analysisScreen.classList.add('active');
+    progressContainer.style.display = 'block';
+    loadingSpinner.style.display = 'block'; // Spinner zeigen
+    resultsContainer.style.display = 'none';
+
+    try {
+        // --- PHASE 1: UPLOAD (0% bis 20%) ---
+        statusDisplay.innerText = "Lade Datei hoch...";
+        updateUI(20); 
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        const response = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Upload fehlgeschlagen");
+
+        const gcsUri = data.gcs_uri;
+
+        // --- PHASE 2: INDIZIERUNG (20% bis 90%) ---
+        let isIndexed = false;
+        let attempts = 0;
+        const maxAttempts = 30;
+
+        while (!isIndexed && attempts < maxAttempts) {
+            attempts++;
+            statusDisplay.innerText = `Dokument wird indiziert... (Versuch ${attempts}/${maxAttempts})`;
+            
+            // KORREKTUR: POST statt GET, passend zu deinem Backend
+            const statusCheck = await fetch('/check_file_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gcs_uri: gcsUri })
+            });
+            const statusData = await statusCheck.json();
+
+            if (statusData.status === 'INDEXED') {
+                isIndexed = true;
+            } else {
+                let progress = 20 + (attempts / maxAttempts) * 65;
+                updateUI(progress);
+                await new Promise(resolve => setTimeout(resolve, 10000)); 
+            }
+        }
+
+        if (!isIndexed) throw new Error("Indizierung dauert zu lange. Bitte später versuchen.");
+
+        // --- PHASE 3: VEKTOR-PUFFER (90% bis 100%) ---
+        statusDisplay.innerText = "KI bereitet Analyse vor (Vektorisierung)...";
+        updateUI(95);
+        await new Promise(resolve => setTimeout(resolve, 25000)); 
+
+        updateUI(100);
+        
+        // AUTOMATIK: Jetzt direkt die Analyse starten!
+        statusDisplay.innerText = "Generiere Zusammenfassung...";
+        const analyzeRes = await fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_path: gcsUri })
+        });
+        const analyzeData = await analyzeRes.json();
+        
+        if (!analyzeRes.ok) throw new Error(analyzeData.details || "Analyse fehlgeschlagen");
+
+        // Ergebnis anzeigen
+        resultsContainer.innerHTML = marked.parse(analyzeData.analysis_result);
+        resultsContainer.style.display = 'block';
+        loadingSpinner.style.display = 'none';
+        progressContainer.style.display = 'none';
+
+    } catch (error) {
+        showStatus(analysisStatus, error.message, true);
+        loadingSpinner.style.display = 'none';
+        console.error(error);
+    }
+}
+
+function updateUI(percent) {
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = percent + "%";
+    progressBar.innerText = Math.round(percent) + "%";
+}
 
     async function analyzeSelectedFile() {
         const path = fileDropdown.value;
