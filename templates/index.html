@@ -189,10 +189,10 @@ async function uploadFile() {
             const uploadData = await res.json();
             const gcsUri = uploadData.path;
 
-            // Schritt 2: Polling der Indizierung (30% bis 90%)
+            // Schritt 2: Polling der Indizierung
             let indexed = false;
             for (let i = 0; i < 30; i++) {
-                progressBar.style.width = `${20 + (i * 2.3)}%`; // Balken wächst langsam
+                progressBar.style.width = `${20 + (i * 2)}%`;
                 const statusRes = await fetch('/check_file_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -201,10 +201,14 @@ async function uploadFile() {
                 const statusData = await statusRes.json();
                 
                 if (statusData.status === 'INDEXED') {
+                    // NEU: Wenn 'INDEXED', warte zusätzliche 20 Sekunden für die Vektorisierung
+                    progressBar.style.width = '90%';
+                    fileNameDisplay.textContent = "Fast fertig... KI lernt die Inhalte (OCR Phase)...";
+                    await new Promise(r => setTimeout(r, 20000)); 
                     indexed = true;
                     break;
                 }
-                await new Promise(r => setTimeout(r, 10000)); // 10 Sek warten
+                await new Promise(r => setTimeout(r, 10000));
             }
 
             if (!indexed) throw new Error("Indizierung dauert zu lange. Die Datei erscheint gleich im Dropdown.");

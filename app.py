@@ -178,16 +178,36 @@ def analyze_script():
     file_name = file_path.split("/")[-1]
 
     try:
-        user_prompt = f"Analysiere den Inhalt der Datei '{file_name}'. Nutze dafür das Data Store Tool. Erstelle die drei geforderten Abschnitte (Zusammenfassung, Thematische Übersicht, Lernziele) basierend auf den abgerufenen Fakten."
+        # KORREKTUR: Aggressiverer Prompt, um Tool-Nutzung zu erzwingen
+        user_prompt = (
+            f"NUTZE DAS DATA_STORE_TOOL! Suche in deinem Index nach der Datei '{file_name}'. "
+            f"Extrahiere alle Informationen aus '{file_name}' und erstelle daraus: "
+            f"1. Zusammenfassung, 2. Thematische Übersicht, 3. Lernziele. "
+            f"Antworte NUR mit den Fakten aus dieser Datei."
+        )
         
-        # KORREKTUR: Kurzname verwenden (verhindert 404) und Upgrade auf 2.5 Flash
+        # 1. Modell definieren (Kurzname für europe-west1)
         model = GenerativeModel(
             model_name='gemini-2.5-flash',
             system_instruction=SYSTEM_PROMPT,
             tools=tools
         )
 
-        response = model.generate_content(user_prompt)
+        # 2. TOOL_CONFIG hinzufügen: Zwingt die KI, das Such-Tool tatsächlich zu verwenden
+        from vertexai.generative_models import ToolConfig
+        
+        tool_config = ToolConfig(
+            forced_function_calling_config=ToolConfig.ForcedFunctionCallingConfig(
+                mode=ToolConfig.ForcedFunctionCallingConfig.Mode.ANY,
+                allowed_function_names=[] # Leer lassen für Retrieval-Tools
+            )
+        )
+
+        # 3. Content generieren (mit der tool_config!)
+        response = model.generate_content(
+            user_prompt,
+            tool_config=tool_config
+        )
         # NEU: Sicherheitscheck (verhindert Abstürze bei leeren Antworten)
         if not response.candidates or not response.candidates[0].content.parts:
             return jsonify({
