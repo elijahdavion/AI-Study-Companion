@@ -167,15 +167,20 @@ def analyze_script():
     try:
         user_prompt = f"Analysiere den Inhalt der Datei '{file_name}'. Nutze dafür das Data Store Tool. Erstelle die drei geforderten Abschnitte (Zusammenfassung, Thematische Übersicht, Lernziele) basierend auf den abgerufenen Fakten."
         
-        # In der EU Region (europe-west1) ist dieser Name am sichersten:
+        # KORREKTUR: Kurzname verwenden (verhindert 404) und Upgrade auf 2.5 Flash
         model = GenerativeModel(
-        model_name='publishers/google/models/gemini-1.5-flash',
-        system_instruction=SYSTEM_PROMPT,
-        tools=tools
-    )
+            model_name='gemini-2.5-flash',
+            system_instruction=SYSTEM_PROMPT,
+            tools=tools
+        )
 
         response = model.generate_content(user_prompt)
-        
+        # NEU: Sicherheitscheck (verhindert Abstürze bei leeren Antworten)
+        if not response.candidates or not response.candidates[0].content.parts:
+            return jsonify({
+                "error": "Keine Inhalte generiert.",
+                "details": "Das Modell konnte keine Informationen extrahieren. Eventuell ist die Indizierung noch nicht fertig."
+            }), 404
         # Prüfung auf "Finish Reason" (oft SAFETY oder OTHER, wenn Grounding fehlschlägt)
         if response.candidates[0].finish_reason != 1: # 1 = STOP (Erfolg)
             app.logger.warning(f"Modell beendete mit Grund: {response.candidates[0].finish_reason}")
@@ -228,10 +233,12 @@ def check_file_status():
             f"dataStores/{final_datastore_id}/branches/0"
         )
 
-        # Set the regional endpoint if not global
+        # KORREKTUR: Expliziter EU-Endpoint für Discovery Engine
         client_options = None
-        if DATA_STORE_LOCATION and DATA_STORE_LOCATION != "global":
-            client_options = {"api_endpoint": f"{DATA_STORE_LOCATION}-discoveryengine.googleapis.com"}
+        if DATA_STORE_LOCATION:
+            # Für Europa ist 'eu' der korrekte Präfix für die Discovery Engine API
+            endpoint = "eu-discoveryengine.googleapis.com" if DATA_STORE_LOCATION.lower() in ["eu", "europe-west1"] else f"{DATA_STORE_LOCATION}-discoveryengine.googleapis.com"
+            client_options = {"api_endpoint": endpoint}
 
         client = discoveryengine.DocumentServiceClient(client_options=client_options)
         
