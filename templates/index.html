@@ -154,7 +154,6 @@
     function goHome() {
         homeScreen.classList.add('active');
         analysisScreen.classList.remove('active');
-        analysisStatus.style.display = 'none';
     }
 
     async function loadFiles() {
@@ -171,61 +170,17 @@
     async function uploadFile() {
         if (pdfUpload.files.length === 0) return showStatus(homeStatus, "Wähle eine Datei", true);
         const uploadBtn = document.getElementById('uploadBtn');
-        const file = pdfUpload.files[0];
-        uploadBtn.disabled = true;
-        homeStatus.style.display = 'none';
-        
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '10%';
-        fileNameDisplay.textContent = "Lade hoch...";
+        uploadBtn.disabled = true; homeStatus.style.display = 'none';
 
-        const formData = new FormData();
-        formData.append('file', file);
-        
+        const formData = new FormData(); formData.append('file', pdfUpload.files[0]);
         try {
             const res = await fetch('/upload', { method: 'POST', body: formData });
             if (!res.ok) throw new Error("Upload fehlgeschlagen");
-            const uploadData = await res.json();
-            const gcsUri = uploadData.path;
-
-            let indexed = false;
-            // Erhöhtes Polling: Max 15 Versuche à 10 Sek
-            for (let i = 0; i < 15; i++) {
-                let progress = 20 + (i * 4);
-                progressBar.style.width = `${progress}%`;
-                fileNameDisplay.textContent = `Indiziere in Google Cloud... (${i+1}/15)`;
-
-                const statusRes = await fetch('/check_file_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ gcs_uri: gcsUri })
-                });
-                const statusData = await statusRes.json();
-                
-                if (statusData.status === 'INDEXED') {
-                    progressBar.style.width = '95%';
-                    fileNameDisplay.textContent = "Vektorisierung wird abgeschlossen...";
-                    // Wir warten hier kürzer, da die analyze-Funktion nun ein eigenes Retry hat
-                    await new Promise(r => setTimeout(r, 15000)); 
-                    indexed = true;
-                    break;
-                }
-                await new Promise(r => setTimeout(r, 10000)); 
-            }
-
-            if (!indexed) throw new Error("Indizierung dauert noch an. Bitte Dropdown in Kürze prüfen.");
-
-            progressBar.style.width = '100%';
-            showStatus(homeStatus, "Datei bereit zur Analyse!", false);
+            showStatus(homeStatus, "Upload erfolgreich!", false);
             await loadFiles();
-            fileNameDisplay.textContent = "";
-            pdfUpload.value = "";
         } catch (error) {
             showStatus(homeStatus, error.message, true);
-        } finally {
-            uploadBtn.disabled = false;
-            setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
-        }
+        } finally { uploadBtn.disabled = false; }
     }
 
     async function analyzeSelectedFile() {
@@ -236,45 +191,42 @@
         analysisScreen.classList.add('active');
         loadingSpinner.style.display = 'block';
         resultsContainer.style.display = 'none';
-        analysisStatus.style.display = 'none';
-        
-        let attempts = 0;
-        const maxAttempts = 3;
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '5%';
 
-        async function performAnalysis() {
-            attempts++;
-            loadingText.textContent = attempts > 1 
-                ? `Vektorisierung dauert länger... Versuch ${attempts}/${maxAttempts}` 
-                : "KI analysiert das Skript...";
-
-            try {
-                const res = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_path: path })
+        try {
+            let indexed = false;
+            for (let i = 0; i < 30; i++) {
+                loadingText.textContent = `Prüfe Indizierung... (${i+1}/30)`;
+                const statusRes = await fetch('/check_file_status', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gcs_uri: path })
                 });
-                
-                const data = await res.json();
-
-                if (res.status === 404 && attempts < maxAttempts) {
-                    console.log("Inhalt noch nicht bereit, versuche es erneut...");
-                    await new Promise(r => setTimeout(r, 20000)); // 20 Sek warten vor Retry
-                    return performAnalysis();
-                }
-
-                if (!res.ok) throw new Error(data.details || "Analyse fehlgeschlagen");
-
-                resultsContainer.innerHTML = marked.parse(data.analysis_result);
-                resultsContainer.style.display = 'block';
-                loadingSpinner.style.display = 'none';
-
-            } catch (error) {
-                loadingSpinner.style.display = 'none';
-                showStatus(analysisStatus, error.message, true);
+                const statusData = await statusRes.json();
+                if (statusData.status === 'INDEXED') { indexed = true; break; }
+                progressBar.style.width = `${5 + (i * 3)}%`;
+                await new Promise(r => setTimeout(r, 10000));
             }
-        }
 
-        performAnalysis();
+            if (!indexed) throw new Error("Indizierung dauert zu lange. Bitte später versuchen.");
+
+            progressBar.style.width = '100%';
+            loadingText.textContent = "Generiere Analyse...";
+            const res = await fetch('/analyze', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_path: path })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.details || "Analyse fehlgeschlagen");
+
+            resultsContainer.innerHTML = marked.parse(data.analysis_result);
+            resultsContainer.style.display = 'block';
+        } catch (error) {
+            showStatus(analysisStatus, error.message, true);
+        } finally {
+            loadingSpinner.style.display = 'none';
+            progressContainer.style.display = 'none';
+        }
     }
 </script>
 
