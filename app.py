@@ -3,7 +3,7 @@ import logging
 from flask import Flask, request, jsonify, render_template
 from google.cloud import storage
 import vertexai
-from vertexai.generative_models import GenerativeModel, Tool, grounding
+from vertexai.generative_models import GenerativeModel, Tool, grounding, ToolConfig
 from google.cloud import discoveryengine_v1 as discoveryengine
 from google.api_core import exceptions
 
@@ -193,14 +193,14 @@ def analyze_script():
             tools=tools
         )
 
-        # 2. Die stabilste Art der Konfiguration: Ein einfaches Dictionary
-        # Das umgeht alle "AttributeError" und "ImportError" Probleme
-        tool_config = {
-            "forced_function_calling_config": {
-                "mode": "ANY",
-                "allowed_function_names": []
-            }
-        }
+       # 2. KORREKTUR: ToolConfig als Objekt statt Dictionary
+        tool_config = ToolConfig(
+            forced_function_calling_config=ToolConfig.ForcedFunctionCallingConfig(
+                # Manchmal ist "ANY" (als String) oder Mode.ANY korrekt. 
+                # Die stabilste Variante für 1.70.0 ist:
+                mode="ANY" 
+            )
+        )       
 
         # 3. Content generieren mit dem Dictionary
         response = model.generate_content(
